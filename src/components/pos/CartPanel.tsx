@@ -94,9 +94,6 @@ export function CartPanel({ onOpenCheckout }: CartPanelProps) {
             <p className="text-xs text-slate-500 max-w-xs mt-1">
               Select or search medicines from the catalogue to add them to this transaction.
             </p>
-            <div className="mt-4 text-[11px] bg-slate-50 text-slate-500 px-3 py-1.5 rounded-md border border-slate-200">
-              Tip: Press <kbd className="font-mono font-bold text-slate-700">F2</kbd> to search medicines
-            </div>
           </div>
         ) : (
           <div className="p-3 space-y-2">
@@ -289,9 +286,6 @@ export function CartPanel({ onOpenCheckout }: CartPanelProps) {
             className="w-full py-3 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm shadow-md shadow-emerald-200 flex items-center justify-center gap-2 transition-all cursor-pointer"
           >
             <span>Proceed to Checkout</span>
-            <span className="bg-emerald-700 text-emerald-100 text-xs px-2 py-0.5 rounded font-mono font-normal">
-              F4
-            </span>
             <ArrowRight className="w-4 h-4 ml-0.5" />
           </button>
         </div>

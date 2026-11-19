@@ -83,7 +83,7 @@ export function MedicineSearch({ searchInputRef }: MedicineSearchProps) {
             type="text"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search medicine name, generic name, strength (Press F2 to focus)..."
+            placeholder="Search medicine name, generic name, strength..."
             className="w-full pl-10 pr-10 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:bg-white focus:border-emerald-500 transition-all font-medium"
           />
           {query && (

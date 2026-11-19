@@ -1,13 +1,55 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { usePathname, useRouter } from "next/navigation";
 import { Sidebar } from "./Sidebar";
 import { TopNav } from "./TopNav";
 import { CartProvider } from "@/stores/CartContext";
+import { AuthProvider, useAuth } from "@/stores/AuthContext";
 import { X } from "lucide-react";
 
-export function AppLayout({ children }: { children: React.ReactNode }) {
+function ProtectedAppContent({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname();
+  const router = useRouter();
+  const { isAuthenticated, isLoading } = useAuth();
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+
+  const isLoginPage = pathname === "/login";
+
+  useEffect(() => {
+    if (!isLoading && !isAuthenticated && !isLoginPage) {
+      router.replace("/login");
+    }
+  }, [isAuthenticated, isLoading, isLoginPage, router]);
+
+  // If on login page, render full screen without layout
+  if (isLoginPage) {
+    return <>{children}</>;
+  }
+
+  // If checking session, show clean subtle loading state
+  if (isLoading) {
+    return (
+      <div className="h-screen w-screen flex flex-col items-center justify-center bg-slate-50 gap-2">
+        <div className="w-6 h-6 border-2 border-emerald-600 border-t-transparent rounded-full animate-spin" />
+        <p className="text-xs text-slate-500 font-sans">
+          Loading...
+        </p>
+      </div>
+    );
+  }
+
+  // If unauthenticated and redirect is in progress
+  if (!isAuthenticated) {
+    return (
+      <div className="h-screen w-screen flex flex-col items-center justify-center bg-slate-50 gap-2">
+        <div className="w-6 h-6 border-2 border-slate-400 border-t-transparent rounded-full animate-spin" />
+        <p className="text-xs text-slate-500 font-sans">
+          Redirecting to login...
+        </p>
+      </div>
+    );
+  }
 
   return (
     <CartProvider>
@@ -49,5 +91,13 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
         </div>
       </div>
     </CartProvider>
+  );
+}
+
+export function AppLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <AuthProvider>
+      <ProtectedAppContent>{children}</ProtectedAppContent>
+    </AuthProvider>
   );
 }

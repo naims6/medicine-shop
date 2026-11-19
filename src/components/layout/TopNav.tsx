@@ -1,38 +1,38 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import {
   Menu,
   Clock,
   RotateCcw,
-  Sparkles,
-  Command,
   CheckCircle,
+  LogOut,
 } from "lucide-react";
 import { medicineRepository } from "@/repositories/medicineRepository";
 import { salesRepository } from "@/repositories/salesRepository";
+import { useAuth } from "@/stores/AuthContext";
 
 const titleMap: Record<string, { title: string; subtitle: string }> = {
-  "/": {
+  "/dashboard": {
     title: "Dashboard",
-    subtitle: "Real-time sales performance & pharmacy overview",
+    subtitle: "Sales performance & pharmacy overview",
   },
-  "/pos": {
+  "/dashboard/pos": {
     title: "Point of Sale (POS)",
-    subtitle: "Fast medicine billing & receipt checkout",
+    subtitle: "Fast billing & customer receipts",
   },
-  "/medicines": {
+  "/dashboard/medicines": {
     title: "Medicine Catalogue",
-    subtitle: "Manage drugs, dosages, pricing & availability",
+    subtitle: "Manage drugs, dosages & pricing",
   },
-  "/sales": {
+  "/dashboard/sales": {
     title: "Sales History",
-    subtitle: "Complete audit log, invoice search & reprinting",
+    subtitle: "Invoices, transactions & records",
   },
-  "/settings": {
+  "/dashboard/settings": {
     title: "Settings",
-    subtitle: "Pharmacy profile, tax configuration & preferences",
+    subtitle: "Pharmacy store preferences",
   },
 };
 
@@ -42,6 +42,8 @@ interface TopNavProps {
 
 export function TopNav({ onToggleMobileSidebar }: TopNavProps) {
   const pathname = usePathname();
+  const router = useRouter();
+  const { user, logout } = useAuth();
   const [currentDateTime, setCurrentDateTime] = useState<string>("");
   const [isResetting, setIsResetting] = useState(false);
   const [showResetSuccess, setShowResetSuccess] = useState(false);
@@ -49,16 +51,19 @@ export function TopNav({ onToggleMobileSidebar }: TopNavProps) {
   useEffect(() => {
     const updateTime = () => {
       const now = new Date();
-      const formatted = now.toLocaleDateString("en-GB", {
-        weekday: "short",
-        day: "numeric",
-        month: "short",
-        year: "numeric",
-      }) + " • " + now.toLocaleTimeString("en-US", {
-        hour: "2-digit",
-        minute: "2-digit",
-        hour12: true,
-      });
+      const formatted =
+        now.toLocaleDateString("en-GB", {
+          weekday: "short",
+          day: "numeric",
+          month: "short",
+          year: "numeric",
+        }) +
+        " • " +
+        now.toLocaleTimeString("en-US", {
+          hour: "2-digit",
+          minute: "2-digit",
+          hour12: true,
+        });
       setCurrentDateTime(formatted);
     };
 
@@ -69,7 +74,7 @@ export function TopNav({ onToggleMobileSidebar }: TopNavProps) {
 
   const meta = titleMap[pathname] || {
     title: "PharmaCare POS",
-    subtitle: "Medicine Shop Management",
+    subtitle: "Pharmacy Management",
   };
 
   const handleResetData = async () => {
@@ -83,6 +88,13 @@ export function TopNav({ onToggleMobileSidebar }: TopNavProps) {
         setIsResetting(false);
         window.location.reload();
       }, 600);
+    }
+  };
+
+  const handleLogout = async () => {
+    if (confirm("Are you sure you want to log out?")) {
+      await logout();
+      router.replace("/login");
     }
   };
 
@@ -108,27 +120,34 @@ export function TopNav({ onToggleMobileSidebar }: TopNavProps) {
       </div>
 
       <div className="flex items-center gap-3">
-        {/* Quick Keyboard shortcuts hint */}
-        <div className="hidden lg:flex items-center gap-1.5 text-xs text-slate-500 bg-slate-50 px-2.5 py-1 rounded-md border border-slate-200">
-          <Command className="w-3.5 h-3.5 text-slate-400" />
-          <span className="font-mono bg-white px-1.5 py-0.5 rounded border border-slate-200 text-slate-700 font-semibold text-[11px]">F2</span>
-          <span>Find Drug</span>
-          <span className="mx-1 text-slate-300">|</span>
-          <span className="font-mono bg-white px-1.5 py-0.5 rounded border border-slate-200 text-slate-700 font-semibold text-[11px]">F4</span>
-          <span>Pay</span>
-        </div>
-
         {/* Live Clock */}
         <div className="hidden md:flex items-center gap-2 text-xs text-slate-600 bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-200">
           <Clock className="w-3.5 h-3.5 text-emerald-600" />
-          <span className="font-medium font-mono">{currentDateTime || "Loading..."}</span>
+          <span className="font-medium font-mono">
+            {currentDateTime || "Loading..."}
+          </span>
         </div>
 
-        {/* Store badge */}
-        <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs font-medium">
-          <Sparkles className="w-3 h-3 text-emerald-600" />
-          <span>Dhanmondi Branch</span>
-        </div>
+        {/* User Status / Quick Logout */}
+        {user && (
+          <div className="flex items-center gap-2 pl-2 border-l border-slate-200">
+            <div className="hidden sm:flex flex-col text-right">
+              <span className="text-xs font-semibold text-slate-800 leading-tight">
+                {user.name.split(" ")[0]}
+              </span>
+              <span className="text-[10px] text-slate-500 capitalize">
+                {user.role}
+              </span>
+            </div>
+            <button
+              onClick={handleLogout}
+              title="Logout"
+              className="p-1.5 rounded-lg border border-slate-200 hover:bg-rose-50 hover:text-rose-600 hover:border-rose-200 text-slate-500 transition-colors cursor-pointer"
+            >
+              <LogOut className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        )}
 
         {/* Reset Demo Data button */}
         <button
@@ -140,11 +159,15 @@ export function TopNav({ onToggleMobileSidebar }: TopNavProps) {
           {showResetSuccess ? (
             <>
               <CheckCircle className="w-3.5 h-3.5 text-emerald-600" />
-              <span className="hidden sm:inline text-emerald-700">Reset Done</span>
+              <span className="hidden sm:inline text-emerald-700">
+                Reset Done
+              </span>
             </>
           ) : (
             <>
-              <RotateCcw className={`w-3.5 h-3.5 ${isResetting ? "animate-spin text-emerald-600" : "text-slate-400"}`} />
+              <RotateCcw
+                className={`w-3.5 h-3.5 ${isResetting ? "animate-spin text-emerald-600" : "text-slate-400"}`}
+              />
               <span className="hidden sm:inline">Reset Demo</span>
             </>
           )}

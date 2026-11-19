@@ -87,3 +87,15 @@ export interface DashboardMetrics {
   }[];
   recentTransactions: Sale[];
 }
+
+export type UserRole = "cashier" | "admin";
+
+export interface User {
+  id: string;
+  name: string;
+  email: string;
+  role: UserRole;
+  counter?: string;
+  shift?: string;
+}
+

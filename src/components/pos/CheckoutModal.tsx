@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { salesRepository } from "@/repositories/salesRepository";
 import { useCart } from "@/stores/CartContext";
+import { useAuth } from "@/stores/AuthContext";
 
 interface CheckoutModalProps {
   isOpen: boolean;
@@ -47,6 +48,7 @@ function CheckoutModalContent({
     totalQuantity,
     clearCart,
   } = useCart();
+  const { user } = useAuth();
 
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("Cash");
   const [amountReceived, setAmountReceived] = useState<number>(total);
@@ -85,7 +87,7 @@ function CheckoutModalContent({
     try {
       setIsSubmitting(true);
       const sale = await salesRepository.create({
-        cashierName: "Mohammad Rafiq",
+        cashierName: user?.name || "Mohammad Rafiq",
         items: items.map((i) => ({
           medicineId: i.medicineId,
           name: i.name,

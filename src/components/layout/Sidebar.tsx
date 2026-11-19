@@ -2,48 +2,49 @@
 
 import React from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import {
   LayoutDashboard,
   ShoppingCart,
   Pill,
   History,
   Settings,
-  ShieldCheck,
   Store,
   ChevronRight,
-  User,
+  User as UserIcon,
+  LogOut,
 } from "lucide-react";
 import { useCart } from "@/stores/CartContext";
+import { useAuth } from "@/stores/AuthContext";
 
 const navItems = [
   {
     name: "Dashboard",
-    href: "/",
+    href: "/dashboard",
     icon: LayoutDashboard,
     badge: null,
   },
   {
     name: "New Sale (POS)",
-    href: "/pos",
+    href: "/dashboard/pos",
     icon: ShoppingCart,
     isPOS: true,
   },
   {
     name: "Medicines",
-    href: "/medicines",
+    href: "/dashboard/medicines",
     icon: Pill,
     badge: null,
   },
   {
     name: "Sales History",
-    href: "/sales",
+    href: "/dashboard/sales",
     icon: History,
     badge: null,
   },
   {
     name: "Settings",
-    href: "/settings",
+    href: "/dashboard/settings",
     icon: Settings,
     badge: null,
   },
@@ -55,7 +56,16 @@ interface SidebarProps {
 
 export function Sidebar({ onCloseMobile }: SidebarProps) {
   const pathname = usePathname();
+  const router = useRouter();
   const { totalQuantity } = useCart();
+  const { user, logout } = useAuth();
+
+  const handleLogout = async () => {
+    if (confirm("Are you sure you want to log out of the POS terminal?")) {
+      await logout();
+      router.replace("/login");
+    }
+  };
 
   return (
     <aside className="w-64 bg-white border-r border-slate-200 flex flex-col h-full shrink-0 select-none">
@@ -75,10 +85,10 @@ export function Sidebar({ onCloseMobile }: SidebarProps) {
       {/* POS Quick CTA */}
       <div className="p-3">
         <Link
-          href="/pos"
+          href="/dashboard/pos"
           onClick={onCloseMobile}
           className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-lg text-sm font-medium transition-all shadow-xs ${
-            pathname === "/pos"
+            pathname === "/dashboard/pos"
               ? "bg-emerald-600 text-white shadow-emerald-200"
               : "bg-emerald-50 text-emerald-800 hover:bg-emerald-100 border border-emerald-200"
           }`}
@@ -141,25 +151,37 @@ export function Sidebar({ onCloseMobile }: SidebarProps) {
         })}
       </div>
 
-      {/* System Status & Cashier Card */}
+      {/* System Status & Authenticated Operator Card */}
       <div className="p-3 border-t border-slate-200 bg-slate-50/50 space-y-2">
         <div className="flex items-center justify-between px-2 text-xs text-slate-500">
           <span className="flex items-center gap-1.5">
             <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-            System Online
+            Terminal Online
           </span>
-          <span className="font-mono text-[11px] text-slate-400">Offline-Ready</span>
+          <span className="font-mono text-[11px] uppercase text-emerald-700 bg-emerald-50 px-1.5 py-0.2 rounded border border-emerald-200 font-semibold">
+            {user?.role || "cashier"}
+          </span>
         </div>
 
         <div className="bg-white p-2.5 rounded-lg border border-slate-200 flex items-center gap-2.5 shadow-2xs">
-          <div className="w-8 h-8 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-600 shrink-0">
-            <User className="w-4 h-4" />
+          <div className="w-8 h-8 rounded-full bg-emerald-50 border border-emerald-200 flex items-center justify-center text-emerald-700 font-bold shrink-0 text-xs">
+            {user?.name ? user.name[0] : <UserIcon className="w-4 h-4" />}
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-xs font-semibold text-slate-900 truncate">Mohammad Rafiq</p>
-            <p className="text-[11px] text-slate-500 truncate">Counter 01 • Day Shift</p>
+            <p className="text-xs font-semibold text-slate-900 truncate">
+              {user?.name || "Mohammad Rafiq"}
+            </p>
+            <p className="text-[10px] text-slate-400 truncate">
+              {user?.counter || "Counter 01"} • {user?.shift || "Day Shift"}
+            </p>
           </div>
-          <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0" />
+          <button
+            onClick={handleLogout}
+            title="Log Out Terminal"
+            className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-md transition-colors cursor-pointer shrink-0"
+          >
+            <LogOut className="w-4 h-4" />
+          </button>
         </div>
       </div>
     </aside>

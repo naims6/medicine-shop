@@ -11,16 +11,18 @@ import {
 } from "lucide-react";
 import { medicineRepository } from "@/repositories/medicineRepository";
 import { salesRepository } from "@/repositories/salesRepository";
+import { useAuth } from "@/stores/AuthContext";
 
 export default function SettingsPage() {
+  const { user } = useAuth();
   const [shopName, setShopName] = useState("PharmaCare Medicine & Surgical");
   const [shopAddress, setShopAddress] = useState(
     "House #12, Road #4, Dhanmondi, Dhaka - 1205",
   );
   const [phone, setPhone] = useState("+880 1711-234567");
   const [regNumber, setRegNumber] = useState("PH-DH-88492");
-  const [cashierName, setCashierName] = useState("Mohammad Rafiq");
-  const [counterNumber, setCounterNumber] = useState("Counter 01");
+  const [cashierName, setCashierName] = useState(user?.name || "Mohammad Rafiq");
+  const [counterNumber, setCounterNumber] = useState(user?.counter || "Counter 01");
   const [printerFormat, setPrinterFormat] = useState("80mm");
   const [savedSuccess, setSavedSuccess] = useState(false);
   const [isResetting, setIsResetting] = useState(false);
