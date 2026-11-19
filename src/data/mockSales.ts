@@ -1,10 +1,26 @@
 import { Sale } from "@/types";
 
+function getPastDate(daysAgo: number, timeStr: string): string {
+  const d = new Date();
+  d.setDate(d.getDate() - daysAgo);
+  const datePart = d.toISOString().split("T")[0];
+  return `${datePart}T${timeStr}.000Z`;
+}
+
+function getPastInvoice(daysAgo: number, seq: string): string {
+  const d = new Date();
+  d.setDate(d.getDate() - daysAgo);
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `INV-${year}${month}${day}-${seq}`;
+}
+
 export const initialSales: Sale[] = [
   {
     id: "sale-101",
-    invoiceNumber: "INV-20261116-0001",
-    createdAt: "2026-11-16T09:15:20.000Z",
+    invoiceNumber: getPastInvoice(0, "0001"),
+    createdAt: getPastDate(0, "09:15:20"),
     cashierName: "Mohammad Rafiq",
     items: [
       {
@@ -44,8 +60,8 @@ export const initialSales: Sale[] = [
   },
   {
     id: "sale-102",
-    invoiceNumber: "INV-20261116-0002",
-    createdAt: "2026-11-16T10:42:15.000Z",
+    invoiceNumber: getPastInvoice(0, "0002"),
+    createdAt: getPastDate(0, "10:42:15"),
     cashierName: "Mohammad Rafiq",
     items: [
       {
@@ -96,8 +112,8 @@ export const initialSales: Sale[] = [
   },
   {
     id: "sale-103",
-    invoiceNumber: "INV-20261116-0003",
-    createdAt: "2026-11-16T12:05:00.000Z",
+    invoiceNumber: getPastInvoice(0, "0003"),
+    createdAt: getPastDate(0, "12:05:00"),
     cashierName: "Tanvir Ahmed",
     items: [
       {
@@ -137,8 +153,8 @@ export const initialSales: Sale[] = [
   },
   {
     id: "sale-104",
-    invoiceNumber: "INV-20261116-0004",
-    createdAt: "2026-11-16T14:30:10.000Z",
+    invoiceNumber: getPastInvoice(0, "0004"),
+    createdAt: getPastDate(0, "14:30:10"),
     cashierName: "Mohammad Rafiq",
     items: [
       {
@@ -178,8 +194,8 @@ export const initialSales: Sale[] = [
   },
   {
     id: "sale-105",
-    invoiceNumber: "INV-20261116-0005",
-    createdAt: "2026-11-16T16:10:45.000Z",
+    invoiceNumber: getPastInvoice(0, "0005"),
+    createdAt: getPastDate(0, "16:10:45"),
     cashierName: "Mohammad Rafiq",
     items: [
       {
@@ -220,8 +236,8 @@ export const initialSales: Sale[] = [
   // Previous days
   {
     id: "sale-106",
-    invoiceNumber: "INV-20261115-0012",
-    createdAt: "2026-11-15T18:40:00.000Z",
+    invoiceNumber: getPastInvoice(1, "0012"),
+    createdAt: getPastDate(1, "18:40:00"),
     cashierName: "Tanvir Ahmed",
     items: [
       {
@@ -260,8 +276,8 @@ export const initialSales: Sale[] = [
   },
   {
     id: "sale-107",
-    invoiceNumber: "INV-20261115-0011",
-    createdAt: "2026-11-15T14:15:00.000Z",
+    invoiceNumber: getPastInvoice(1, "0011"),
+    createdAt: getPastDate(1, "14:15:00"),
     cashierName: "Mohammad Rafiq",
     items: [
       {
@@ -300,8 +316,8 @@ export const initialSales: Sale[] = [
   },
   {
     id: "sale-108",
-    invoiceNumber: "INV-20261114-0008",
-    createdAt: "2026-11-14T11:20:00.000Z",
+    invoiceNumber: getPastInvoice(2, "0008"),
+    createdAt: getPastDate(2, "11:20:00"),
     cashierName: "Tanvir Ahmed",
     items: [
       {
@@ -340,8 +356,8 @@ export const initialSales: Sale[] = [
   },
   {
     id: "sale-109",
-    invoiceNumber: "INV-20261113-0015",
-    createdAt: "2026-11-13T16:00:00.000Z",
+    invoiceNumber: getPastInvoice(3, "0015"),
+    createdAt: getPastDate(3, "16:00:00"),
     cashierName: "Mohammad Rafiq",
     items: [
       {
@@ -380,8 +396,8 @@ export const initialSales: Sale[] = [
   },
   {
     id: "sale-110",
-    invoiceNumber: "INV-20261112-0009",
-    createdAt: "2026-11-12T13:45:00.000Z",
+    invoiceNumber: getPastInvoice(4, "0009"),
+    createdAt: getPastDate(4, "13:45:00"),
     cashierName: "Mohammad Rafiq",
     items: [
       {
@@ -431,8 +447,8 @@ export const initialSales: Sale[] = [
   },
   {
     id: "sale-111",
-    invoiceNumber: "INV-20261111-0004",
-    createdAt: "2026-11-11T17:10:00.000Z",
+    invoiceNumber: getPastInvoice(5, "0004"),
+    createdAt: getPastDate(5, "17:10:00"),
     cashierName: "Tanvir Ahmed",
     items: [
       {
@@ -460,8 +476,8 @@ export const initialSales: Sale[] = [
   },
   {
     id: "sale-112",
-    invoiceNumber: "INV-20261110-0002",
-    createdAt: "2026-11-10T10:05:00.000Z",
+    invoiceNumber: getPastInvoice(6, "0002"),
+    createdAt: getPastDate(6, "10:05:00"),
     cashierName: "Mohammad Rafiq",
     items: [
       {

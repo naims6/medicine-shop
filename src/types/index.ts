@@ -98,10 +98,13 @@ export interface ExpiringBatchAlert {
 }
 
 export interface DashboardMetrics {
-  totalRevenue: number;
+  todaySalesAmount: number;
+  todayTransactionsCount: number;
+  weeklySalesAmount: number;
+  weeklyTransactionsCount: number;
+  monthlySalesAmount: number;
+  monthlyTransactionsCount: number;
   totalTransactions: number;
-  averageTransactionValue: number;
-  totalMedicinesSold: number;
   weeklySales: { day: string; date: string; amount: number; count: number }[];
   monthlySales: { month: string; amount: number; count: number }[];
   topSellingMedicines: {
@@ -119,6 +122,9 @@ export interface DashboardMetrics {
   expiringCount: number;
   expiredCount: number;
   expiringAlerts: ExpiringBatchAlert[];
+  totalRevenue?: number;
+  averageTransactionValue?: number;
+  totalMedicinesSold?: number;
 }
 
 export type UserRole = "cashier" | "admin";

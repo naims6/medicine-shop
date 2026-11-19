@@ -2,7 +2,7 @@ import { Sale, DashboardMetrics, PaymentMethod, ExpiringBatchAlert } from "@/typ
 import { initialSales } from "@/data/mockSales";
 import { medicineRepository } from "./medicineRepository";
 
-const SALES_STORAGE_KEY = "pharmacare_sales_v1";
+const SALES_STORAGE_KEY = "pharmacare_sales_v2";
 
 function getStoredSales(): Sale[] {
   if (typeof window === "undefined") {
@@ -55,7 +55,7 @@ export interface ISalesRepository {
     startDate?: string;
     endDate?: string;
   }): Promise<Sale[]>;
-  getDashboardMetrics(range?: "today" | "7days" | "30days" | "all"): Promise<DashboardMetrics>;
+  getDashboardMetrics(): Promise<DashboardMetrics>;
   resetToDefault(): Promise<void>;
 }
 
@@ -129,34 +129,51 @@ export const salesRepository: ISalesRepository = {
     });
   },
 
-  async getDashboardMetrics(range: "today" | "7days" | "30days" | "all" = "today"): Promise<DashboardMetrics> {
+  async getDashboardMetrics(): Promise<DashboardMetrics> {
     const allSales = await this.getAll();
     const now = new Date();
+    const todayYear = now.getFullYear();
+    const todayMonth = now.getMonth();
+    const todayDate = now.getDate();
 
-    const filtered = allSales.filter((s) => {
-      const sDate = new Date(s.createdAt);
-      if (range === "today") {
-        return (
-          sDate.getFullYear() === now.getFullYear() &&
-          sDate.getMonth() === now.getMonth() &&
-          sDate.getDate() === now.getDate()
-        );
+    let todaySalesAmount = 0;
+    let todayTransactionsCount = 0;
+
+    let weeklySalesAmount = 0;
+    let weeklyTransactionsCount = 0;
+
+    let monthlySalesAmount = 0;
+    let monthlyTransactionsCount = 0;
+
+    allSales.forEach((sale) => {
+      const sDate = new Date(sale.createdAt);
+      const isToday =
+        sDate.getFullYear() === todayYear &&
+        sDate.getMonth() === todayMonth &&
+        sDate.getDate() === todayDate;
+
+      if (isToday) {
+        todaySalesAmount += sale.totalAmount;
+        todayTransactionsCount += 1;
       }
-      if (range === "7days") {
-        const diffDays = (now.getTime() - sDate.getTime()) / (1000 * 3600 * 24);
-        return diffDays <= 7;
+
+      const diffDays = (now.getTime() - sDate.getTime()) / (1000 * 3600 * 24);
+
+      if (diffDays >= 0 && diffDays <= 7) {
+        weeklySalesAmount += sale.totalAmount;
+        weeklyTransactionsCount += 1;
       }
-      if (range === "30days") {
-        const diffDays = (now.getTime() - sDate.getTime()) / (1000 * 3600 * 24);
-        return diffDays <= 30;
+
+      if (diffDays >= 0 && diffDays <= 30) {
+        monthlySalesAmount += sale.totalAmount;
+        monthlyTransactionsCount += 1;
       }
-      return true;
     });
 
-    const totalRevenue = filtered.reduce((acc, s) => acc + s.totalAmount, 0);
-    const totalTransactions = filtered.length;
+    const totalTransactions = allSales.length;
+    const totalRevenue = allSales.reduce((acc, s) => acc + s.totalAmount, 0);
     const averageTransactionValue = totalTransactions > 0 ? totalRevenue / totalTransactions : 0;
-    const totalMedicinesSold = filtered.reduce((acc, s) => acc + s.totalItems, 0);
+    const totalMedicinesSold = allSales.reduce((acc, s) => acc + s.totalItems, 0);
 
     // Top selling medicines aggregated
     const medicineSalesMap = new Map<
@@ -278,6 +295,12 @@ export const salesRepository: ISalesRepository = {
     const expiringCount = expiringAlerts.filter((a) => a.status !== "expired").length;
 
     return {
+      todaySalesAmount,
+      todayTransactionsCount,
+      weeklySalesAmount,
+      weeklyTransactionsCount,
+      monthlySalesAmount,
+      monthlyTransactionsCount,
       totalRevenue,
       totalTransactions,
       averageTransactionValue,
