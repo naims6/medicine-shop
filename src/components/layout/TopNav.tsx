@@ -73,7 +73,7 @@ export function TopNav({ onToggleMobileSidebar }: TopNavProps) {
   }, []);
 
   const meta = titleMap[pathname] || {
-    title: "PharmaCare POS",
+    title: "Shodesh Pharmacy POS",
     subtitle: "Pharmacy Management",
   };
 

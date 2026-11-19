@@ -14,32 +14,33 @@ function ProtectedAppContent({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoading } = useAuth();
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
 
-  const isLoginPage = pathname === "/login";
+  const isDashboardRoute = pathname.startsWith("/dashboard");
 
   useEffect(() => {
-    if (!isLoading && !isAuthenticated && !isLoginPage) {
+    // Only dashboard routes require authentication
+    if (!isLoading && !isAuthenticated && isDashboardRoute) {
       router.replace("/login");
     }
-  }, [isAuthenticated, isLoading, isLoginPage, router]);
+  }, [isAuthenticated, isLoading, isDashboardRoute, router]);
 
-  // If on login page, render full screen without layout
-  if (isLoginPage) {
+  // Public pages (Home page `/`, Login page `/login`, etc.) render without dashboard chrome
+  if (!isDashboardRoute) {
     return <>{children}</>;
   }
 
-  // If checking session, show clean subtle loading state
+  // If checking session on a protected dashboard route, show subtle loading indicator
   if (isLoading) {
     return (
       <div className="h-screen w-screen flex flex-col items-center justify-center bg-slate-50 gap-2">
         <div className="w-6 h-6 border-2 border-emerald-600 border-t-transparent rounded-full animate-spin" />
         <p className="text-xs text-slate-500 font-sans">
-          Loading...
+          Loading dashboard...
         </p>
       </div>
     );
   }
 
-  // If unauthenticated and redirect is in progress
+  // If unauthenticated on a protected dashboard route and redirect is in progress
   if (!isAuthenticated) {
     return (
       <div className="h-screen w-screen flex flex-col items-center justify-center bg-slate-50 gap-2">

@@ -52,13 +52,13 @@ export function ReceiptModal({
           {/* Receipt Header */}
           <div className="text-center pb-3 border-b border-dashed border-slate-300">
             <h2 className="text-base font-bold text-slate-900 font-sans tracking-tight">
-              PharmaCare Medicine & Surgical
+              Shodesh Pharmacy
             </h2>
             <p className="text-[11px] text-slate-500 font-sans">
-              House #12, Road #4, Dhanmondi, Dhaka - 1205
+              Holding #42/A, Main Road, Block-D, Section-6, Mirpur, Dhaka
             </p>
             <p className="text-[11px] text-slate-500 font-sans">
-              Hotline: +880 1711-234567 • Reg: PH-DH-88492
+              Hotline: +880 1711-234567 • License: DGDA/DL-2024/98421
             </p>
             <div className="mt-2 text-[10px] bg-slate-100 py-0.5 px-2 rounded inline-block font-sans font-medium text-slate-700">
               RETAIL CASH MEMO
@@ -159,11 +159,11 @@ export function ReceiptModal({
           <div className="pt-3 text-center text-[10px] text-slate-500 space-y-1 font-sans">
             <p className="flex items-center justify-center gap-1 font-medium text-slate-700">
               <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
-              Thank you for choosing PharmaCare!
+              Thank you for choosing Shodesh Pharmacy!
             </p>
             <p>Medicines sold cannot be returned without original receipt.</p>
             <p className="text-[9px] text-slate-400 font-mono">
-              Software by PharmaCare POS • Verified Terminal
+              Software by Shodesh Pharmacy POS • Verified Terminal
             </p>
           </div>
         </div>

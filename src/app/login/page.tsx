@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/stores/AuthContext";
 import { Store, Eye, EyeOff, AlertCircle } from "lucide-react";
@@ -59,12 +60,17 @@ export default function LoginPage() {
       <div className="w-full max-w-sm space-y-6">
         {/* Brand */}
         <div className="flex flex-col items-center gap-2">
-          <div className="w-10 h-10 rounded-xl bg-emerald-600 flex items-center justify-center text-white">
+          <Link href="/" className="w-10 h-10 rounded-xl bg-emerald-600 flex items-center justify-center text-white hover:bg-emerald-700 transition-colors" title="Back to Store Home">
             <Store className="w-5 h-5" />
+          </Link>
+          <div className="text-center">
+            <span className="font-bold text-lg tracking-tight text-slate-900 block">
+              Shodesh Pharmacy
+            </span>
+            <Link href="/" className="text-xs text-emerald-600 hover:underline">
+              ← Back to Store Website
+            </Link>
           </div>
-          <span className="font-bold text-lg tracking-tight text-slate-900">
-            Shodesh Pharmecy
-          </span>
         </div>
 
         {/* Card */}

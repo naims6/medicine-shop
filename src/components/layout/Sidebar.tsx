@@ -58,17 +58,17 @@ export function Sidebar({ onCloseMobile }: SidebarProps) {
     <aside className="w-64 bg-white border-r border-slate-200 flex flex-col h-full shrink-0 select-none">
       {/* Brand Header */}
       <div className="h-16 flex items-center px-5 border-b border-slate-200 gap-3">
-        <div className="w-10 h-10 rounded-xl bg-emerald-600 flex items-center justify-center text-white shadow-sm shadow-emerald-200">
-          <Store className="w-5 h-5" />
-        </div>
-        <div className="flex flex-col">
-          <span className="font-bold text-slate-900 tracking-tight text-base flex items-center gap-1.5">
-            Pharmecy{" "}
-            <span className="text-xs font-semibold px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200">
-              POS
+        <Link href="/" className="flex items-center gap-2.5 group" title="Visit Shodesh Pharmacy Store Home">
+          <div className="w-9 h-9 rounded-xl bg-emerald-600 flex items-center justify-center text-white shadow-xs group-hover:bg-emerald-700 transition-colors">
+            <Store className="w-5 h-5" />
+          </div>
+          <div className="flex flex-col">
+            <span className="font-bold text-slate-900 tracking-tight text-sm flex items-center gap-1.5">
+              Shodesh Pharmacy
             </span>
-          </span>
-        </div>
+            <span className="text-[11px] text-slate-400 font-medium">POS Terminal</span>
+          </div>
+        </Link>
       </div>
 
       {/* POS Quick CTA */}
