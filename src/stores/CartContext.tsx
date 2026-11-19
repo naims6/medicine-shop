@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useEffect, useState, useMemo } from "react";
 import { CartItem, Medicine } from "@/types";
+import { getSellableStockCount, getEarliestDispensingBatch } from "@/lib/expiryUtils";
 
 interface CartContextType {
   items: CartItem[];
@@ -85,8 +86,10 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
   const addItem = (medicine: Medicine, qty: number = 1) => {
     if (!medicine.isActive) return;
-    const availableStock = typeof medicine.currentStock === "number" ? medicine.currentStock : 999;
-    if (availableStock <= 0) return; // Cannot add out-of-stock items
+    const availableStock = getSellableStockCount(medicine);
+    if (availableStock <= 0) return; // Cannot add out-of-stock or fully expired items
+
+    const activeBatch = getEarliestDispensingBatch(medicine.batches);
 
     setItems((prev) => {
       const existingIndex = prev.findIndex((i) => i.medicineId === medicine.id);
@@ -98,6 +101,8 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
           ...existing,
           quantity: newQty,
           currentStock: availableStock,
+          batchNumber: existing.batchNumber || activeBatch?.batchNumber,
+          expiryDate: existing.expiryDate || activeBatch?.expiryDate,
           subtotal: Number((newQty * existing.unitPrice).toFixed(2)),
         };
         return updated;
@@ -113,6 +118,8 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
           unit: medicine.unit,
           quantity: initialQty,
           currentStock: availableStock,
+          batchNumber: activeBatch?.batchNumber,
+          expiryDate: activeBatch?.expiryDate,
           subtotal: Number((initialQty * medicine.sellingPrice).toFixed(2)),
         };
         return [newItem, ...prev];

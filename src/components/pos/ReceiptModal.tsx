@@ -104,6 +104,12 @@ export function ReceiptModal({
                     <p className="text-[10px] text-slate-500 font-sans">
                       {item.strength} • {item.dosageForm}
                     </p>
+                    {(item.batchNumber || item.expiryDate) && (
+                      <p className="text-[9px] text-slate-400 font-mono">
+                        {item.batchNumber ? `B:${item.batchNumber}` : ""}
+                        {item.expiryDate ? ` Exp:${item.expiryDate}` : ""}
+                      </p>
+                    )}
                   </div>
                   <div className="col-span-2 text-center font-medium">
                     {item.quantity}

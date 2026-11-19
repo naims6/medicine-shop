@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import { useCart } from "@/stores/CartContext";
 import { formatCurrency } from "@/lib/utils";
+import { formatExpiryDate } from "@/lib/expiryUtils";
 import {
   Trash2,
   Plus,
@@ -110,9 +111,21 @@ export function CartPanel({ onOpenCheckout }: CartPanelProps) {
                     </h5>
                     <div className="flex items-center gap-1.5 text-[11px] text-slate-500">
                       <span className="truncate">{item.genericName} • {item.strength}</span>
+                    </div>
+                    <div className="flex items-center gap-2 mt-1">
+                      {item.batchNumber && (
+                        <span className="inline-flex items-center text-[10px] font-mono px-1.5 py-0.5 rounded bg-slate-100 text-slate-600 font-medium">
+                          Batch: {item.batchNumber}
+                        </span>
+                      )}
+                      {item.expiryDate && (
+                        <span className="text-[10px] text-slate-500">
+                          Exp: {formatExpiryDate(item.expiryDate)}
+                        </span>
+                      )}
                       {typeof item.currentStock === "number" && (
                         <span className="text-[10px] text-slate-400 font-mono">
-                          (Stock: {item.currentStock})
+                          (Avail: {item.currentStock})
                         </span>
                       )}
                     </div>

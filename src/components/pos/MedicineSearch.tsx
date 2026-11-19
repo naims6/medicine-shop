@@ -4,6 +4,12 @@ import React, { useState, useEffect } from "react";
 import { Medicine, DosageForm } from "@/types";
 import { formatCurrency } from "@/lib/utils";
 import {
+  getBatchAnalysis,
+  getEarliestDispensingBatch,
+  hasSellableStock,
+  getSellableStockCount,
+} from "@/lib/expiryUtils";
+import {
   Search,
   Plus,
   MapPin,
@@ -11,6 +17,7 @@ import {
   X,
   Filter,
   AlertTriangle,
+  Clock,
 } from "lucide-react";
 import { medicineRepository } from "@/repositories/medicineRepository";
 import { useCart } from "@/stores/CartContext";
@@ -32,7 +39,7 @@ export function MedicineSearch({ searchInputRef }: MedicineSearchProps) {
   const [query, setQuery] = useState("");
   const [selectedForm, setSelectedForm] = useState<DosageForm | "All">("All");
   const [selectedCategory, setSelectedCategory] = useState<string>("All");
-  const [stockFilter, setStockFilter] = useState<"all" | "low">("all");
+  const [stockFilter, setStockFilter] = useState<"all" | "low" | "expiring">("all");
   const [medicines, setMedicines] = useState<Medicine[]>([]);
   const [categories, setCategories] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -60,7 +67,7 @@ export function MedicineSearch({ searchInputRef }: MedicineSearchProps) {
       const results = await medicineRepository.search(query, {
         dosageForm: selectedForm,
         category: selectedCategory,
-        stockFilter: stockFilter === "low" ? "low" : undefined,
+        stockFilter: stockFilter === "all" ? undefined : stockFilter,
         includeInactive: false,
       });
       setMedicines(results);
@@ -128,6 +135,19 @@ export function MedicineSearch({ searchInputRef }: MedicineSearchProps) {
               <AlertTriangle className="w-3 h-3" />
               <span>Low Stock</span>
             </button>
+
+            {/* Quick Expiring Soon Toggle */}
+            <button
+              onClick={() => setStockFilter(stockFilter === "expiring" ? "all" : "expiring")}
+              className={`px-2.5 py-1 text-xs rounded-md font-semibold transition-colors shrink-0 flex items-center gap-1 cursor-pointer ${
+                stockFilter === "expiring"
+                  ? "bg-rose-600 text-white shadow-xs"
+                  : "bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-200"
+              }`}
+            >
+              <Clock className="w-3 h-3" />
+              <span>Expiring (&lt;90d)</span>
+            </button>
           </div>
 
           {/* Category Dropdown */}
@@ -183,22 +203,28 @@ export function MedicineSearch({ searchInputRef }: MedicineSearchProps) {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
             {medicines.map((med) => {
+              const sellableStock = getSellableStockCount(med);
               const inCartQty = inCartMap.get(med.id) || 0;
-              const isOutOfStock = med.currentStock <= 0;
-              const isLowStock = med.currentStock > 0 && med.currentStock <= med.minStockAlert;
-              const isMaxInCart = inCartQty >= med.currentStock;
+              const isOutOfStock = sellableStock <= 0 && med.currentStock <= 0;
+              const isFullyExpired = med.currentStock > 0 && !hasSellableStock(med);
+              const isLowStock = sellableStock > 0 && sellableStock <= med.minStockAlert;
+              const isMaxInCart = inCartQty >= sellableStock;
+
+              const activeBatch = getEarliestDispensingBatch(med.batches);
+              const batchAnalysis = activeBatch ? getBatchAnalysis(activeBatch.expiryDate) : null;
+              const isBlocked = isOutOfStock || isFullyExpired || isMaxInCart;
 
               return (
                 <div
                   key={med.id}
                   onClick={() => {
-                    if (!isOutOfStock && !isMaxInCart) {
+                    if (!isBlocked) {
                       addItem(med, 1);
                     }
                   }}
                   className={`p-3 rounded-lg border transition-all text-left flex flex-col justify-between select-none group ${
-                    isOutOfStock
-                      ? "border-slate-200 bg-slate-50/80 opacity-60 cursor-not-allowed"
+                    isBlocked
+                      ? "border-slate-200 bg-slate-50/80 opacity-70 cursor-not-allowed"
                       : inCartQty > 0
                       ? "border-emerald-300 bg-emerald-50/30 hover:border-emerald-500 hover:bg-emerald-50/50 cursor-pointer"
                       : "border-slate-200 bg-white hover:border-slate-300 hover:shadow-xs cursor-pointer"
@@ -232,20 +258,45 @@ export function MedicineSearch({ searchInputRef }: MedicineSearchProps) {
                       <span className="text-slate-300">•</span>
 
                       {/* Stock Status Badge */}
-                      {isOutOfStock ? (
+                      {isFullyExpired ? (
+                        <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-rose-100 text-rose-800 border border-rose-300">
+                          Expired Batch
+                        </span>
+                      ) : isOutOfStock ? (
                         <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-rose-50 text-rose-700 border border-rose-200">
                           Out of Stock
                         </span>
                       ) : isLowStock ? (
                         <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-amber-50 text-amber-700 border border-amber-200">
-                          Low: {med.currentStock} left
+                          Low: {sellableStock} left
                         </span>
                       ) : (
                         <span className="text-[10px] font-medium text-emerald-700 bg-emerald-50 px-1.5 py-0.2 rounded border border-emerald-100">
-                          Stock: {med.currentStock}
+                          Stock: {sellableStock}
                         </span>
                       )}
                     </div>
+
+                    {/* Batch and Expiry Pill (FEFO Active Batch) */}
+                    {activeBatch && (
+                      <div className="mt-2 flex items-center gap-1.5 text-[10px]">
+                        <span className="font-mono text-slate-600 bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200">
+                          B: {activeBatch.batchNumber}
+                        </span>
+                        {batchAnalysis && (
+                          <span
+                            className={`px-1.5 py-0.5 rounded border font-medium ${batchAnalysis.badgeClass}`}
+                          >
+                            {batchAnalysis.label}
+                          </span>
+                        )}
+                        {(med.batches?.length || 0) > 1 && (
+                          <span className="text-[10px] text-slate-400">
+                            +{med.batches!.length - 1} more
+                          </span>
+                        )}
+                      </div>
+                    )}
                   </div>
 
                   {/* Bottom row: Location, Price, and Add Button */}
@@ -271,28 +322,28 @@ export function MedicineSearch({ searchInputRef }: MedicineSearchProps) {
 
                       <button
                         type="button"
-                        disabled={isOutOfStock || isMaxInCart}
+                        disabled={isBlocked}
                         onClick={(e) => {
                           e.stopPropagation();
-                          if (!isOutOfStock && !isMaxInCart) {
+                          if (!isBlocked) {
                             addItem(med, 1);
                           }
                         }}
                         className={`w-7 h-7 rounded-md flex items-center justify-center transition-colors ${
-                          isOutOfStock
+                          isBlocked
                             ? "bg-slate-200 text-slate-400 cursor-not-allowed"
-                            : isMaxInCart
-                            ? "bg-amber-600 text-white cursor-not-allowed"
                             : inCartQty > 0
                             ? "bg-emerald-600 text-white hover:bg-emerald-700 shadow-xs cursor-pointer"
                             : "bg-slate-100 hover:bg-emerald-600 hover:text-white text-slate-600 cursor-pointer"
                         }`}
                         title={
-                          isOutOfStock
+                          isFullyExpired
+                            ? "Cannot sell: Batch has expired"
+                            : isOutOfStock
                             ? "Out of stock"
                             : isMaxInCart
-                            ? `All ${med.currentStock} in stock added to cart`
-                            : "Add to cart"
+                            ? `All ${sellableStock} sellable stock added to cart`
+                            : "Add to cart (FEFO)"
                         }
                       >
                         {inCartQty > 0 ? (

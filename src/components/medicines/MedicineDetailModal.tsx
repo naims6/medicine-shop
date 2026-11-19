@@ -3,8 +3,9 @@
 import React from "react";
 import { Medicine } from "@/types";
 import { formatCurrency } from "@/lib/utils";
+import { getBatchAnalysis, formatExpiryDate } from "@/lib/expiryUtils";
 import { Modal } from "@/components/ui/Modal";
-import { Pill, Building2, MapPin, Tag, CheckCircle2, XCircle, Package, AlertTriangle } from "lucide-react";
+import { Pill, Building2, MapPin, Tag, CheckCircle2, XCircle, Package, AlertTriangle, Layers } from "lucide-react";
 
 interface MedicineDetailModalProps {
   isOpen: boolean;
@@ -105,6 +106,64 @@ export function MedicineDetailModal({
               {medicine.minStockAlert ?? 20} {medicine.unit}s
             </p>
           </div>
+        </div>
+
+        {/* Batches & Expiry Breakdown */}
+        <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-lg space-y-2.5">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-1.5 text-xs font-bold text-slate-900">
+              <Layers className="w-3.5 h-3.5 text-emerald-600" />
+              <span>Batches & Expiry Breakdown</span>
+            </div>
+            <span className="text-[10px] text-slate-500 font-mono">
+              {medicine.batches?.length || 0} batch{medicine.batches?.length === 1 ? "" : "es"} on shelf
+            </span>
+          </div>
+
+          {medicine.batches && medicine.batches.length > 0 ? (
+            <div className="border border-slate-200 rounded-md overflow-hidden bg-white">
+              <table className="w-full text-left text-xs">
+                <thead className="bg-slate-100 text-[10px] text-slate-500 uppercase tracking-wider font-semibold border-b border-slate-200">
+                  <tr>
+                    <th className="py-1.5 px-3">Batch Number</th>
+                    <th className="py-1.5 px-3">Expiry Date</th>
+                    <th className="py-1.5 px-3 text-center">In Stock</th>
+                    <th className="py-1.5 px-3 text-right">Status</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {medicine.batches.map((batch) => {
+                    const analysis = getBatchAnalysis(batch.expiryDate);
+                    return (
+                      <tr key={batch.id} className="hover:bg-slate-50/80">
+                        <td className="py-2 px-3 font-mono font-bold text-slate-800">
+                          {batch.batchNumber}
+                        </td>
+                        <td className="py-2 px-3 text-slate-600">
+                          <span className="font-mono">{batch.expiryDate}</span>
+                          <span className="text-[10px] text-slate-400 ml-1.5">
+                            ({formatExpiryDate(batch.expiryDate)})
+                          </span>
+                        </td>
+                        <td className="py-2 px-3 text-center font-mono font-bold text-slate-900">
+                          {batch.stock}
+                        </td>
+                        <td className="py-2 px-3 text-right">
+                          <span
+                            className={`inline-block px-2 py-0.5 rounded-full text-[10px] font-semibold border ${analysis.badgeClass}`}
+                          >
+                            {analysis.label}
+                          </span>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <p className="text-xs text-slate-400 italic">No batch records registered.</p>
+          )}
         </div>
 
         {/* Status banner */}

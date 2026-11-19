@@ -5,10 +5,10 @@ import Link from "next/link";
 import { salesRepository } from "@/repositories/salesRepository";
 import { DashboardMetrics, Sale } from "@/types";
 import { formatCurrency, formatDateTime } from "@/lib/utils";
+import { formatExpiryDate } from "@/lib/expiryUtils";
 import {
   DollarSign,
   ShoppingBag,
-  TrendingUp,
   Pill,
   ArrowRight,
   Receipt,
@@ -18,6 +18,8 @@ import {
   CheckCircle2,
   AlertTriangle,
   PackagePlus,
+  Clock,
+  Layers,
 } from "lucide-react";
 import { SalesChart } from "@/components/dashboard/SalesChart";
 import { ReceiptModal } from "@/components/pos/ReceiptModal";
@@ -29,6 +31,7 @@ export default function DashboardPage() {
   const [selectedRange, setSelectedRange] = useState<TimeRange>("today");
   const [isLoading, setIsLoading] = useState(true);
   const [selectedReceipt, setSelectedReceipt] = useState<Sale | null>(null);
+  const [alertTab, setAlertTab] = useState<"reorder" | "expiry">("reorder");
 
   useEffect(() => {
     let isMounted = true;
@@ -96,102 +99,115 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* 5 Summary Stat Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3.5">
+      {/* 6 Summary Stat Cards */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
         {/* Card 1: Revenue */}
-        <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs flex items-center justify-between">
+        <div className="bg-white p-3.5 rounded-xl border border-slate-200 shadow-xs flex items-center justify-between">
           <div>
-            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
-              Sales Revenue
+            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
+              Revenue
             </span>
-            <p className="text-xl font-bold font-mono text-slate-900 mt-1">
+            <p className="text-lg font-bold font-mono text-slate-900 mt-0.5">
               {isLoading ? "..." : formatCurrency(metrics?.totalRevenue || 0)}
             </p>
-            <span className="text-[11px] text-emerald-600 font-medium flex items-center gap-1 mt-0.5">
-              <TrendingUp className="w-3 h-3" />
-              <span>{rangeLabels[selectedRange]}</span>
+            <span className="text-[10px] text-emerald-600 font-medium">
+              Completed sales
             </span>
           </div>
-          <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 border border-emerald-100 flex items-center justify-center">
-            <DollarSign className="w-5 h-5" />
+          <div className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 border border-emerald-100 flex items-center justify-center shrink-0">
+            <DollarSign className="w-4 h-4" />
           </div>
         </div>
 
         {/* Card 2: Transactions */}
-        <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs flex items-center justify-between">
+        <div className="bg-white p-3.5 rounded-xl border border-slate-200 shadow-xs flex items-center justify-between">
           <div>
-            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
               Transactions
             </span>
-            <p className="text-xl font-bold font-mono text-slate-900 mt-1">
+            <p className="text-lg font-bold font-mono text-slate-900 mt-0.5">
               {isLoading ? "..." : metrics?.totalTransactions || 0}
             </p>
-            <span className="text-[11px] text-slate-500 mt-0.5 block">
-              Completed cash memos
-            </span>
+            <span className="text-[10px] text-slate-400">Total bills memo</span>
           </div>
-          <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 border border-blue-100 flex items-center justify-center">
-            <ShoppingBag className="w-5 h-5" />
+          <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 border border-blue-100 flex items-center justify-center shrink-0">
+            <ShoppingBag className="w-4 h-4" />
           </div>
         </div>
 
-        {/* Card 3: Avg Basket Value */}
-        <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs flex items-center justify-between">
+        {/* Card 3: Avg Sale */}
+        <div className="bg-white p-3.5 rounded-xl border border-slate-200 shadow-xs flex items-center justify-between">
           <div>
-            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
-              Average Ticket
+            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
+              Avg Ticket
             </span>
-            <p className="text-xl font-bold font-mono text-slate-900 mt-1">
-              {isLoading
-                ? "..."
-                : formatCurrency(metrics?.averageTransactionValue || 0)}
+            <p className="text-lg font-bold font-mono text-slate-900 mt-0.5">
+              {isLoading ? "..." : formatCurrency(metrics?.averageTransactionValue || 0)}
             </p>
-            <span className="text-[11px] text-slate-500 mt-0.5 block">
-              Per customer receipt
-            </span>
+            <span className="text-[10px] text-slate-400">Per receipt</span>
           </div>
-          <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-600 border border-amber-100 flex items-center justify-center">
-            <Receipt className="w-5 h-5" />
+          <div className="w-8 h-8 rounded-lg bg-amber-50 text-amber-600 border border-amber-100 flex items-center justify-center shrink-0">
+            <Receipt className="w-4 h-4" />
           </div>
         </div>
 
         {/* Card 4: Medicines Sold */}
-        <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs flex items-center justify-between">
+        <div className="bg-white p-3.5 rounded-xl border border-slate-200 shadow-xs flex items-center justify-between">
           <div>
-            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
-              Units Dispensed
+            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
+              Dispensed
             </span>
-            <p className="text-xl font-bold font-mono text-slate-900 mt-1">
+            <p className="text-lg font-bold font-mono text-slate-900 mt-0.5">
               {isLoading ? "..." : `${metrics?.totalMedicinesSold || 0} pcs`}
             </p>
-            <span className="text-[11px] text-slate-500 mt-0.5 block">
-              Total quantity sold
-            </span>
+            <span className="text-[10px] text-slate-400">Units sold</span>
           </div>
-          <div className="w-10 h-10 rounded-xl bg-purple-50 text-purple-600 border border-purple-100 flex items-center justify-center">
-            <Pill className="w-5 h-5" />
+          <div className="w-8 h-8 rounded-lg bg-purple-50 text-purple-600 border border-purple-100 flex items-center justify-center shrink-0">
+            <Pill className="w-4 h-4" />
           </div>
         </div>
 
-        {/* Card 5: Low Stock Alert (Level 1 Stock) */}
+        {/* Card 5: Low Stock Alert */}
         <Link
           href="/dashboard/medicines"
-          className="bg-white p-4 rounded-xl border border-slate-200 hover:border-amber-400 shadow-xs flex items-center justify-between transition-colors group cursor-pointer"
+          className="bg-white p-3.5 rounded-xl border border-slate-200 hover:border-amber-400 shadow-xs flex items-center justify-between transition-colors group cursor-pointer"
         >
           <div>
-            <span className="text-[11px] font-bold uppercase tracking-wider text-amber-800 flex items-center gap-1">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-amber-800 flex items-center gap-1">
               <AlertTriangle className="w-3 h-3 text-amber-600" />
-              Stock Alert
+              Low Stock
             </span>
-            <p className="text-xl font-bold font-mono text-amber-700 mt-1">
+            <p className="text-lg font-bold font-mono text-amber-700 mt-0.5">
               {isLoading ? "..." : `${metrics?.lowStockCount || 0} items`}
             </p>
-            <span className="text-[11px] text-amber-600 font-medium group-hover:underline mt-0.5 block">
-              Click to reorder →
+            <span className="text-[10px] text-amber-600 font-medium group-hover:underline">
+              Reorder limit →
             </span>
           </div>
-          <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-600 border border-amber-200 flex items-center justify-center">
-            <PackagePlus className="w-5 h-5" />
+          <div className="w-8 h-8 rounded-lg bg-amber-50 text-amber-600 border border-amber-200 flex items-center justify-center shrink-0">
+            <PackagePlus className="w-4 h-4" />
+          </div>
+        </Link>
+
+        {/* Card 6: Expiry Alert (<90d) */}
+        <Link
+          href="/dashboard/medicines"
+          className="bg-white p-3.5 rounded-xl border border-slate-200 hover:border-rose-400 shadow-xs flex items-center justify-between transition-colors group cursor-pointer"
+        >
+          <div>
+            <span className="text-[10px] font-bold uppercase tracking-wider text-rose-800 flex items-center gap-1">
+              <Clock className="w-3 h-3 text-rose-600" />
+              Expiring Soon
+            </span>
+            <p className="text-lg font-bold font-mono text-rose-700 mt-0.5">
+              {isLoading ? "..." : `${metrics?.expiringCount || 0} batches`}
+            </p>
+            <span className="text-[10px] text-rose-600 font-medium group-hover:underline">
+              &lt;90 days watch →
+            </span>
+          </div>
+          <div className="w-8 h-8 rounded-lg bg-rose-50 text-rose-600 border border-rose-200 flex items-center justify-center shrink-0">
+            <Layers className="w-4 h-4" />
           </div>
         </Link>
       </div>
@@ -259,56 +275,114 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* Bottom Grid: Low Stock Alert Warning Box & Recent Completed Sales */}
+      {/* Bottom Grid: Inventory & Expiry Watch + Recent Completed Sales */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        {/* Low Stock Warning Card (1 col) */}
+        {/* Inventory Alert Watch Card (1 col) */}
         <div className="bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden flex flex-col">
-          <div className="px-5 py-4 border-b border-slate-200 bg-amber-50/50 flex items-center justify-between">
-            <div>
-              <h3 className="text-sm font-bold text-amber-900 flex items-center gap-1.5">
-                <AlertTriangle className="w-4 h-4 text-amber-600" />
-                <span>Reorder Alerts</span>
-              </h3>
-              <p className="text-xs text-amber-700">Stock below reorder limit</p>
+          <div className="px-4 py-3 border-b border-slate-200 bg-slate-50 flex items-center justify-between">
+            {/* Tabs for Reorder vs Expiry Watch */}
+            <div className="flex items-center gap-1 bg-white p-0.5 rounded-lg border border-slate-200 text-xs">
+              <button
+                type="button"
+                onClick={() => setAlertTab("reorder")}
+                className={`px-2.5 py-1 rounded-md font-semibold text-[11px] transition-colors cursor-pointer ${
+                  alertTab === "reorder"
+                    ? "bg-amber-100 text-amber-900 shadow-2xs"
+                    : "text-slate-500 hover:text-slate-800"
+                }`}
+              >
+                Reorder ({metrics?.lowStockCount || 0})
+              </button>
+              <button
+                type="button"
+                onClick={() => setAlertTab("expiry")}
+                className={`px-2.5 py-1 rounded-md font-semibold text-[11px] transition-colors cursor-pointer ${
+                  alertTab === "expiry"
+                    ? "bg-rose-100 text-rose-900 shadow-2xs"
+                    : "text-slate-500 hover:text-slate-800"
+                }`}
+              >
+                Expiry Watch ({metrics?.expiringAlerts?.length || 0})
+              </button>
             </div>
+
             <Link
               href="/dashboard/medicines"
-              className="text-xs font-semibold text-amber-800 hover:underline"
+              className="text-[11px] font-semibold text-emerald-700 hover:underline"
             >
-              Restock All
+              Catalogue →
             </Link>
           </div>
 
-          <div className="p-4 flex-1 overflow-y-auto divide-y divide-slate-100 space-y-2">
-            {!metrics?.lowStockMedicines || metrics.lowStockMedicines.length === 0 ? (
-              <div className="py-8 text-center text-slate-400 text-xs">
-                All medicines are sufficiently stocked!
-              </div>
-            ) : (
-              metrics.lowStockMedicines.slice(0, 5).map((med) => (
-                <div key={med.id} className="pt-2 flex items-center justify-between">
-                  <div>
-                    <h5 className="text-xs font-bold text-slate-900">{med.name}</h5>
-                    <p className="text-[11px] text-slate-500">
-                      {med.strength} • {med.shelfLocation || "Rack N/A"}
-                    </p>
-                  </div>
-                  <div className="text-right">
-                    <span
-                      className={`font-mono font-bold text-xs px-2 py-0.5 rounded-full ${
-                        med.currentStock <= 0
-                          ? "bg-rose-50 text-rose-700 border border-rose-200"
-                          : "bg-amber-50 text-amber-700 border border-amber-200"
-                      }`}
-                    >
-                      {med.currentStock} {med.unit}s
-                    </span>
-                    <span className="block text-[10px] text-slate-400 mt-0.5">
-                      Min: {med.minStockAlert}
-                    </span>
-                  </div>
+          <div className="p-4 flex-1 overflow-y-auto divide-y divide-slate-100 space-y-2 max-h-[360px]">
+            {alertTab === "reorder" ? (
+              !metrics?.lowStockMedicines || metrics.lowStockMedicines.length === 0 ? (
+                <div className="py-12 text-center text-slate-400 text-xs">
+                  All medicines are sufficiently stocked!
                 </div>
-              ))
+              ) : (
+                metrics.lowStockMedicines.slice(0, 6).map((med) => (
+                  <div key={med.id} className="pt-2 flex items-center justify-between">
+                    <div>
+                      <h5 className="text-xs font-bold text-slate-900">{med.name}</h5>
+                      <p className="text-[11px] text-slate-500">
+                        {med.strength} • {med.shelfLocation || "Rack N/A"}
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <span
+                        className={`font-mono font-bold text-xs px-2 py-0.5 rounded-full ${
+                          med.currentStock <= 0
+                            ? "bg-rose-50 text-rose-700 border border-rose-200"
+                            : "bg-amber-50 text-amber-700 border border-amber-200"
+                        }`}
+                      >
+                        {med.currentStock} {med.unit}s
+                      </span>
+                      <span className="block text-[10px] text-slate-400 mt-0.5">
+                        Alert at: {med.minStockAlert}
+                      </span>
+                    </div>
+                  </div>
+                ))
+              )
+            ) : (
+              !metrics?.expiringAlerts || metrics.expiringAlerts.length === 0 ? (
+                <div className="py-12 text-center text-slate-400 text-xs">
+                  No batches near expiry (&lt;90 days)!
+                </div>
+              ) : (
+                metrics.expiringAlerts.slice(0, 6).map((alert, idx) => (
+                  <div key={idx} className="pt-2 flex items-center justify-between">
+                    <div>
+                      <h5 className="text-xs font-bold text-slate-900">
+                        {alert.medicineName}
+                      </h5>
+                      <p className="text-[11px] text-slate-500 font-mono">
+                        Batch: <span className="font-bold text-slate-700">{alert.batchNumber}</span> • Exp: {formatExpiryDate(alert.expiryDate)}
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <span
+                        className={`font-mono font-bold text-[10px] px-2 py-0.5 rounded-full border ${
+                          alert.status === "expired"
+                            ? "bg-red-50 text-red-800 border-red-300"
+                            : alert.status === "critical"
+                            ? "bg-amber-100 text-amber-900 border-amber-300"
+                            : "bg-amber-50 text-amber-800 border-amber-200"
+                        }`}
+                      >
+                        {alert.status === "expired"
+                          ? `Expired (${Math.abs(alert.daysRemaining)}d ago)`
+                          : `Exp in ${alert.daysRemaining}d`}
+                      </span>
+                      <span className="block text-[10px] text-slate-400 font-mono mt-0.5">
+                        {alert.stock} units
+                      </span>
+                    </div>
+                  </div>
+                ))
+              )
             )}
           </div>
         </div>

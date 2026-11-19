@@ -1,4 +1,4 @@
-import { Sale, DashboardMetrics, PaymentMethod } from "@/types";
+import { Sale, DashboardMetrics, PaymentMethod, ExpiringBatchAlert } from "@/types";
 import { initialSales } from "@/data/mockSales";
 import { medicineRepository } from "./medicineRepository";
 
@@ -251,6 +251,32 @@ export const salesRepository: ISalesRepository = {
     const lowStockMedicines = await medicineRepository.getLowStockMedicines();
     const lowStockCount = lowStockMedicines.length;
 
+    // Fetch batch expiry alerts (<= 90 days)
+    const expiringBatchesRaw = await medicineRepository.getExpiringBatches(90);
+    const expiringAlerts: ExpiringBatchAlert[] = expiringBatchesRaw.map((item) => {
+      let status: "expired" | "critical" | "warning" = "warning";
+      if (item.daysRemaining < 0) {
+        status = "expired";
+      } else if (item.daysRemaining <= 30) {
+        status = "critical";
+      }
+
+      return {
+        medicineId: item.medicine.id,
+        medicineName: item.medicine.name,
+        strength: item.medicine.strength,
+        dosageForm: item.medicine.dosageForm,
+        batchNumber: item.batch.batchNumber,
+        expiryDate: item.batch.expiryDate,
+        stock: item.batch.stock,
+        daysRemaining: item.daysRemaining,
+        status,
+      };
+    });
+
+    const expiredCount = expiringAlerts.filter((a) => a.status === "expired").length;
+    const expiringCount = expiringAlerts.filter((a) => a.status !== "expired").length;
+
     return {
       totalRevenue,
       totalTransactions,
@@ -262,6 +288,9 @@ export const salesRepository: ISalesRepository = {
       recentTransactions,
       lowStockCount,
       lowStockMedicines,
+      expiringCount,
+      expiredCount,
+      expiringAlerts,
     };
   },
 

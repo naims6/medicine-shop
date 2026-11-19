@@ -99,6 +99,8 @@ function CheckoutModalContent({
           unit: i.unit,
           quantity: i.quantity,
           subtotal: i.subtotal,
+          batchNumber: i.batchNumber,
+          expiryDate: i.expiryDate,
         })),
         totalItems: totalQuantity,
         subtotal,

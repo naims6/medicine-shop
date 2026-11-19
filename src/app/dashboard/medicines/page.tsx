@@ -5,6 +5,12 @@ import { Medicine, DosageForm } from "@/types";
 import { medicineRepository } from "@/repositories/medicineRepository";
 import { formatCurrency } from "@/lib/utils";
 import {
+  getBatchAnalysis,
+  getEarliestDispensingBatch,
+  getDaysRemaining,
+  formatExpiryDate,
+} from "@/lib/expiryUtils";
+import {
   Search,
   Plus,
   Eye,
@@ -18,6 +24,8 @@ import {
   PackagePlus,
   AlertTriangle,
   PackageX,
+  Clock,
+  Sparkles,
 } from "lucide-react";
 import { MedicineModal } from "@/components/medicines/MedicineModal";
 import { MedicineDetailModal } from "@/components/medicines/MedicineDetailModal";
@@ -36,13 +44,26 @@ const allDosageForms: (DosageForm | "All")[] = [
 
 const ITEMS_PER_PAGE = 8;
 
+function generateBatchNumber(manufacturer: string): string {
+  const prefix = manufacturer.toLowerCase().includes("beximco")
+    ? "BX"
+    : manufacturer.toLowerCase().includes("square")
+    ? "SQ"
+    : manufacturer.toLowerCase().includes("renata")
+    ? "REN"
+    : "BT";
+  const yearSuffix = new Date().getFullYear().toString().slice(-2);
+  const randomSuffix = Math.floor(100 + Math.random() * 900);
+  return `${prefix}-${yearSuffix}${randomSuffix}`;
+}
+
 export default function MedicinesPage() {
   const [medicines, setMedicines] = useState<Medicine[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [selectedForm, setSelectedForm] = useState<DosageForm | "All">("All");
   const [statusFilter, setStatusFilter] = useState<"All" | "Active" | "Inactive">("All");
-  const [stockFilter, setStockFilter] = useState<"all" | "low" | "out">("all");
+  const [stockFilter, setStockFilter] = useState<"all" | "low" | "expiring" | "expired" | "out">("all");
   const [currentPage, setCurrentPage] = useState(1);
 
   // Modals state
@@ -55,6 +76,8 @@ export default function MedicinesPage() {
   // Quick Restock State
   const [restockMedicine, setRestockMedicine] = useState<Medicine | null>(null);
   const [restockAmount, setRestockAmount] = useState<string>("50");
+  const [restockBatchNumber, setRestockBatchNumber] = useState<string>("");
+  const [restockExpiryDate, setRestockExpiryDate] = useState<string>("");
   const [isRestocking, setIsRestocking] = useState(false);
 
   const loadMedicines = useCallback(async () => {
@@ -74,13 +97,33 @@ export default function MedicinesPage() {
     };
   }, []);
 
-  // Stock counts
+  // Stock and expiry counts
   const lowStockCount = useMemo(() => {
     return medicines.filter((m) => m.isActive && m.currentStock > 0 && m.currentStock <= m.minStockAlert).length;
   }, [medicines]);
 
   const outOfStockCount = useMemo(() => {
     return medicines.filter((m) => m.isActive && m.currentStock <= 0).length;
+  }, [medicines]);
+
+  const expiringSoonCount = useMemo(() => {
+    return medicines.filter((m) => {
+      if (!m.isActive || !m.batches) return false;
+      return m.batches.some((b) => {
+        const days = getDaysRemaining(b.expiryDate);
+        return b.stock > 0 && days >= 0 && days <= 90;
+      });
+    }).length;
+  }, [medicines]);
+
+  const expiredCount = useMemo(() => {
+    return medicines.filter((m) => {
+      if (!m.isActive || !m.batches) return false;
+      return m.batches.some((b) => {
+        const days = getDaysRemaining(b.expiryDate);
+        return b.stock > 0 && days < 0;
+      });
+    }).length;
   }, [medicines]);
 
   // Unique categories
@@ -97,12 +140,26 @@ export default function MedicinesPage() {
       if (statusFilter === "Active" && !m.isActive) return false;
       if (statusFilter === "Inactive" && m.isActive) return false;
 
-      // Level 1 Stock Filter
+      // Stock and Expiry Filters
       if (stockFilter === "low" && (m.currentStock <= 0 || m.currentStock > m.minStockAlert)) {
         return false;
       }
       if (stockFilter === "out" && m.currentStock > 0) {
         return false;
+      }
+      if (stockFilter === "expiring") {
+        const hasExpiring = (m.batches || []).some((b) => {
+          const days = getDaysRemaining(b.expiryDate);
+          return b.stock > 0 && days >= 0 && days <= 90;
+        });
+        if (!hasExpiring) return false;
+      }
+      if (stockFilter === "expired") {
+        const hasExpired = (m.batches || []).some((b) => {
+          const days = getDaysRemaining(b.expiryDate);
+          return b.stock > 0 && days < 0;
+        });
+        if (!hasExpired) return false;
       }
 
       if (!q) return true;
@@ -111,7 +168,8 @@ export default function MedicinesPage() {
         m.name.toLowerCase().includes(q) ||
         m.genericName.toLowerCase().includes(q) ||
         m.strength.toLowerCase().includes(q) ||
-        m.manufacturer.toLowerCase().includes(q)
+        m.manufacturer.toLowerCase().includes(q) ||
+        (m.batches || []).some((b) => b.batchNumber.toLowerCase().includes(q))
       );
     });
   }, [medicines, searchQuery, selectedCategory, selectedForm, statusFilter, stockFilter]);
@@ -149,9 +207,23 @@ export default function MedicinesPage() {
     if (modalMode === "create") {
       await medicineRepository.create(data);
     } else if (selectedMedicine) {
-      await medicineRepository.update(selectedMedicine.id, data);
+      await medicineRepository.update(selectedMedicine.id, {
+        ...data,
+        batches: selectedMedicine.batches,
+      });
     }
     await loadMedicines();
+  };
+
+  const handleOpenRestock = (med: Medicine) => {
+    setRestockMedicine(med);
+    setRestockAmount("50");
+    setRestockBatchNumber(generateBatchNumber(med.manufacturer));
+
+    // Default expiry date: 2 years from today
+    const defExp = new Date();
+    defExp.setFullYear(defExp.getFullYear() + 2);
+    setRestockExpiryDate(defExp.toISOString().split("T")[0]);
   };
 
   const handleRestockSubmit = async (e: React.FormEvent) => {
@@ -162,7 +234,12 @@ export default function MedicinesPage() {
 
     try {
       setIsRestocking(true);
-      await medicineRepository.addStock(restockMedicine.id, addQty);
+      await medicineRepository.addStock(
+        restockMedicine.id,
+        addQty,
+        restockBatchNumber.trim(),
+        restockExpiryDate
+      );
       await loadMedicines();
       setRestockMedicine(null);
       setRestockAmount("50");
@@ -173,8 +250,8 @@ export default function MedicinesPage() {
 
   return (
     <div className="space-y-4">
-      {/* Top Inventory Summary Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+      {/* Top Inventory & Expiry Summary Cards */}
+      <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
         <div
           onClick={() => {
             setStockFilter("all");
@@ -197,7 +274,7 @@ export default function MedicinesPage() {
           <p className="text-2xl font-bold font-mono text-slate-900 mt-1">
             {medicines.length}
           </p>
-          <span className="text-[11px] text-slate-400">Total drug profiles</span>
+          <span className="text-[11px] text-slate-400">Total registered brands</span>
         </div>
 
         <div
@@ -214,16 +291,68 @@ export default function MedicinesPage() {
           <div className="flex items-center justify-between">
             <span className="text-[11px] font-bold text-amber-800 uppercase tracking-wider flex items-center gap-1">
               <AlertTriangle className="w-3.5 h-3.5 text-amber-600" />
-              Low Stock Alert
+              Low Stock
             </span>
             <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-amber-50 text-amber-800 border border-amber-200">
-              Needs Order
+              Reorder
             </span>
           </div>
           <p className="text-2xl font-bold font-mono text-amber-700 mt-1">
             {lowStockCount}
           </p>
           <span className="text-[11px] text-amber-600">Below threshold limit</span>
+        </div>
+
+        <div
+          onClick={() => {
+            setStockFilter("expiring");
+            setCurrentPage(1);
+          }}
+          className={`p-3.5 rounded-xl border transition-all cursor-pointer ${
+            stockFilter === "expiring"
+              ? "bg-white border-orange-500 ring-2 ring-orange-500/10 shadow-xs"
+              : "bg-white border-slate-200 hover:border-slate-300"
+          }`}
+        >
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] font-bold text-orange-800 uppercase tracking-wider flex items-center gap-1">
+              <Clock className="w-3.5 h-3.5 text-orange-600" />
+              Expiring Soon
+            </span>
+            <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-orange-50 text-orange-800 border border-orange-200">
+              &lt; 90 Days
+            </span>
+          </div>
+          <p className="text-2xl font-bold font-mono text-orange-700 mt-1">
+            {expiringSoonCount}
+          </p>
+          <span className="text-[11px] text-orange-600">Requires clearance/return</span>
+        </div>
+
+        <div
+          onClick={() => {
+            setStockFilter("expired");
+            setCurrentPage(1);
+          }}
+          className={`p-3.5 rounded-xl border transition-all cursor-pointer ${
+            stockFilter === "expired"
+              ? "bg-white border-red-500 ring-2 ring-red-500/10 shadow-xs"
+              : "bg-white border-slate-200 hover:border-slate-300"
+          }`}
+        >
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] font-bold text-red-800 uppercase tracking-wider flex items-center gap-1">
+              <Clock className="w-3.5 h-3.5 text-red-600" />
+              Expired Stock
+            </span>
+            <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-red-50 text-red-800 border border-red-200">
+              Quarantine
+            </span>
+          </div>
+          <p className="text-2xl font-bold font-mono text-red-700 mt-1">
+            {expiredCount}
+          </p>
+          <span className="text-[11px] text-red-600">Do not sell • Blocked</span>
         </div>
 
         <div
@@ -249,7 +378,7 @@ export default function MedicinesPage() {
           <p className="text-2xl font-bold font-mono text-rose-700 mt-1">
             {outOfStockCount}
           </p>
-          <span className="text-[11px] text-rose-600">Immediate supplier restock required</span>
+          <span className="text-[11px] text-rose-600">Immediate supplier restock</span>
         </div>
       </div>
 
@@ -266,7 +395,7 @@ export default function MedicinesPage() {
                 setSearchQuery(e.target.value);
                 setCurrentPage(1);
               }}
-              placeholder="Search by brand name, generic, or manufacturer..."
+              placeholder="Search by brand name, generic, batch #, manufacturer..."
               className="w-full pl-9 pr-8 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:bg-white"
             />
             {searchQuery && (
@@ -299,18 +428,20 @@ export default function MedicinesPage() {
             <span className="font-semibold text-[11px] uppercase tracking-wider">Filters:</span>
           </div>
 
-          {/* Stock Filter Selector */}
+          {/* Stock & Expiry Filter Selector */}
           <select
             value={stockFilter}
             onChange={(e) => {
-              setStockFilter(e.target.value as "all" | "low" | "out");
+              setStockFilter(e.target.value as "all" | "low" | "expiring" | "expired" | "out");
               setCurrentPage(1);
             }}
             className="bg-slate-50 border border-slate-200 rounded-md px-2 py-1 text-slate-700 focus:outline-none focus:ring-1 focus:ring-emerald-500 font-medium"
           >
-            <option value="all">Stock: All</option>
-            <option value="low">Stock: Low Stock Only ({lowStockCount})</option>
-            <option value="out">Stock: Out of Stock Only ({outOfStockCount})</option>
+            <option value="all">Filter: All Medicines ({medicines.length})</option>
+            <option value="low">Low Stock Only ({lowStockCount})</option>
+            <option value="expiring">Expiring Soon (&lt;90d) ({expiringSoonCount})</option>
+            <option value="expired">Expired Batches Only ({expiredCount})</option>
+            <option value="out">Out of Stock Only ({outOfStockCount})</option>
           </select>
 
           {/* Dosage Form Filter */}
@@ -360,11 +491,7 @@ export default function MedicinesPage() {
             <option value="Inactive">Inactive Only</option>
           </select>
 
-          {(searchQuery ||
-            selectedCategory !== "All" ||
-            selectedForm !== "All" ||
-            statusFilter !== "All" ||
-            stockFilter !== "all") && (
+          {(searchQuery || selectedCategory !== "All" || selectedForm !== "All" || statusFilter !== "All" || stockFilter !== "all") && (
             <button
               onClick={() => {
                 setSearchQuery("");
@@ -374,7 +501,7 @@ export default function MedicinesPage() {
                 setStockFilter("all");
                 setCurrentPage(1);
               }}
-              className="text-[11px] text-rose-600 hover:underline ml-auto font-medium"
+              className="text-emerald-700 hover:text-emerald-800 font-medium text-xs ml-auto hover:underline cursor-pointer"
             >
               Reset Filters
             </button>
@@ -383,14 +510,15 @@ export default function MedicinesPage() {
       </div>
 
       {/* Medicines Table Card */}
-      <div className="bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden flex flex-col">
+      <div className="bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs border-collapse">
+          <table className="w-full text-left border-collapse text-xs">
             <thead>
               <tr className="bg-slate-50/80 border-b border-slate-200 text-slate-500 uppercase tracking-wider font-semibold text-[10px]">
                 <th className="py-3 px-4">Medicine & Strength</th>
                 <th className="py-3 px-4">Generic Name</th>
                 <th className="py-3 px-4">Form</th>
+                <th className="py-3 px-4">Active Batch & Expiry</th>
                 <th className="py-3 px-4">Manufacturer</th>
                 <th className="py-3 px-4 text-right">Selling Price</th>
                 <th className="py-3 px-4 text-center">Stock Level</th>
@@ -401,7 +529,7 @@ export default function MedicinesPage() {
             <tbody className="divide-y divide-slate-100">
               {paginatedMedicines.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="py-12 text-center text-slate-400">
+                  <td colSpan={9} className="py-12 text-center text-slate-400">
                     <Pill className="w-8 h-8 mx-auto mb-2 text-slate-300" />
                     <p className="font-semibold text-slate-700">
                       No medicines found
@@ -415,6 +543,8 @@ export default function MedicinesPage() {
                 paginatedMedicines.map((med) => {
                   const isOutOfStock = med.currentStock <= 0;
                   const isLowStock = med.currentStock > 0 && med.currentStock <= med.minStockAlert;
+                  const activeBatch = getEarliestDispensingBatch(med.batches);
+                  const batchAnalysis = activeBatch ? getBatchAnalysis(activeBatch.expiryDate) : null;
 
                   return (
                     <tr
@@ -427,7 +557,7 @@ export default function MedicinesPage() {
                           {med.strength} • {med.shelfLocation || "Rack N/A"}
                         </div>
                       </td>
-                      <td className="py-3 px-4 text-slate-600 font-medium max-w-[180px] truncate">
+                      <td className="py-3 px-4 text-slate-600 font-medium max-w-[170px] truncate">
                         {med.genericName}
                       </td>
                       <td className="py-3 px-4">
@@ -435,7 +565,35 @@ export default function MedicinesPage() {
                           {med.dosageForm}
                         </span>
                       </td>
-                      <td className="py-3 px-4 text-slate-600 max-w-[160px] truncate">
+
+                      {/* Active Batch & Expiry Column */}
+                      <td className="py-3 px-4">
+                        {activeBatch ? (
+                          <div className="space-y-0.5">
+                            <div className="flex items-center gap-1.5">
+                              <span className="font-mono font-bold text-slate-800 text-[11px]">
+                                {activeBatch.batchNumber}
+                              </span>
+                              {(med.batches?.length || 0) > 1 && (
+                                <span className="text-[9px] px-1 py-0.2 rounded bg-slate-100 text-slate-500 font-mono">
+                                  +{med.batches!.length - 1}
+                                </span>
+                              )}
+                            </div>
+                            {batchAnalysis && (
+                              <span
+                                className={`inline-block px-1.5 py-0.2 rounded text-[10px] font-medium border ${batchAnalysis.badgeClass}`}
+                              >
+                                {batchAnalysis.label}
+                              </span>
+                            )}
+                          </div>
+                        ) : (
+                          <span className="text-slate-400 text-[11px] italic">No batch</span>
+                        )}
+                      </td>
+
+                      <td className="py-3 px-4 text-slate-600 max-w-[150px] truncate">
                         {med.manufacturer}
                       </td>
                       <td className="py-3 px-4 text-right font-mono font-bold text-slate-900">
@@ -464,9 +622,9 @@ export default function MedicinesPage() {
 
                           <button
                             type="button"
-                            onClick={() => setRestockMedicine(med)}
+                            onClick={() => handleOpenRestock(med)}
                             className="text-[10px] font-semibold text-emerald-700 hover:text-emerald-800 hover:underline flex items-center gap-0.5 cursor-pointer"
-                            title="Add newly arrived stock"
+                            title="Add newly arrived batch shipment"
                           >
                             <PackagePlus className="w-3 h-3 inline" />
                             <span>+ Restock</span>
@@ -504,7 +662,7 @@ export default function MedicinesPage() {
                           <button
                             onClick={() => handleOpenDetail(med)}
                             className="p-1.5 text-slate-500 hover:text-slate-900 hover:bg-slate-100 rounded-md transition-colors"
-                            title="View Details"
+                            title="View Specifications & Batches"
                           >
                             <Eye className="w-4 h-4" />
                           </button>
@@ -547,27 +705,19 @@ export default function MedicinesPage() {
 
           <div className="flex items-center gap-1.5">
             <button
-              onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-              disabled={currentPage <= 1}
-              className={`p-1.5 rounded-md border border-slate-200 ${
-                currentPage <= 1
-                  ? "text-slate-300 cursor-not-allowed bg-slate-50"
-                  : "text-slate-700 hover:bg-slate-100 bg-white cursor-pointer"
-              }`}
+              onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
+              disabled={currentPage === 1}
+              className="p-1 rounded-md border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed"
             >
               <ChevronLeft className="w-4 h-4" />
             </button>
-            <span className="px-2 font-medium">
+            <span className="text-xs font-semibold px-2">
               Page {currentPage} of {totalPages}
             </span>
             <button
-              onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-              disabled={currentPage >= totalPages}
-              className={`p-1.5 rounded-md border border-slate-200 ${
-                currentPage >= totalPages
-                  ? "text-slate-300 cursor-not-allowed bg-slate-50"
-                  : "text-slate-700 hover:bg-slate-100 bg-white cursor-pointer"
-              }`}
+              onClick={() => setCurrentPage((p) => Math.min(p + 1, totalPages))}
+              disabled={currentPage === totalPages}
+              className="p-1 rounded-md border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed"
             >
               <ChevronRight className="w-4 h-4" />
             </button>
@@ -584,7 +734,7 @@ export default function MedicinesPage() {
         mode={modalMode}
       />
 
-      {/* Detail Modal */}
+      {/* Medicine Specifications & Batches Modal */}
       <MedicineDetailModal
         isOpen={isDetailOpen}
         onClose={() => setIsDetailOpen(false)}
@@ -592,12 +742,12 @@ export default function MedicinesPage() {
         onEdit={(med) => handleOpenEdit(med)}
       />
 
-      {/* Quick Restock Dialog */}
+      {/* Professional Batch Restock Dialog */}
       <Modal
         isOpen={Boolean(restockMedicine)}
         onClose={() => setRestockMedicine(null)}
-        title="Restock Medicine Shipment"
-        description={`Add newly received physical stock for ${restockMedicine?.name}`}
+        title="Restock Batch Shipment"
+        description={`Record newly received stock and batch details for ${restockMedicine?.name}`}
         maxWidth="max-w-md"
       >
         {restockMedicine && (
@@ -605,7 +755,9 @@ export default function MedicinesPage() {
             <div className="p-3 rounded-lg bg-slate-50 border border-slate-200 text-xs space-y-1">
               <div className="flex justify-between">
                 <span className="text-slate-500">Medicine:</span>
-                <span className="font-bold text-slate-900">{restockMedicine.name} ({restockMedicine.strength})</span>
+                <span className="font-bold text-slate-900">
+                  {restockMedicine.name} ({restockMedicine.strength})
+                </span>
               </div>
               <div className="flex justify-between">
                 <span className="text-slate-500">Manufacturer:</span>
@@ -619,9 +771,10 @@ export default function MedicinesPage() {
               </div>
             </div>
 
-            <div className="space-y-2">
+            {/* Quantity Input */}
+            <div className="space-y-1.5">
               <label className="block text-xs font-semibold text-slate-700">
-                Quantity to Add ({restockMedicine.unit}s)
+                Shipment Quantity ({restockMedicine.unit}s)
               </label>
               <input
                 type="number"
@@ -634,7 +787,7 @@ export default function MedicinesPage() {
               />
 
               {/* Quick Presets */}
-              <div className="flex items-center gap-1.5 pt-1">
+              <div className="flex items-center gap-1.5 pt-0.5">
                 <span className="text-[11px] text-slate-400">Presets:</span>
                 {[20, 50, 100, 200].map((preset) => (
                   <button
@@ -649,8 +802,60 @@ export default function MedicinesPage() {
               </div>
             </div>
 
+            {/* Batch Number Input */}
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between">
+                <label className="block text-xs font-semibold text-slate-700">
+                  Manufacturer Batch No.
+                </label>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setRestockBatchNumber(generateBatchNumber(restockMedicine.manufacturer));
+                  }}
+                  className="text-[10px] font-semibold text-emerald-700 hover:underline flex items-center gap-0.5"
+                >
+                  <Sparkles className="w-2.5 h-2.5" />
+                  Auto-Gen
+                </button>
+              </div>
+              <input
+                type="text"
+                value={restockBatchNumber}
+                onChange={(e) => setRestockBatchNumber(e.target.value)}
+                placeholder="e.g. BX-2601"
+                className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs font-mono font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500 uppercase"
+                required
+              />
+            </div>
+
+            {/* Expiry Date Input */}
+            <div className="space-y-1.5">
+              <label className="block text-xs font-semibold text-slate-700">
+                Batch Expiry Date
+              </label>
+              <div className="relative">
+                <input
+                  type="date"
+                  value={restockExpiryDate}
+                  onChange={(e) => setRestockExpiryDate(e.target.value)}
+                  className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs font-mono text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  required
+                />
+              </div>
+              {restockExpiryDate && (
+                <p className="text-[11px] text-slate-500">
+                  Expiry:{" "}
+                  <strong className="text-slate-700">
+                    {formatExpiryDate(restockExpiryDate)}
+                  </strong>{" "}
+                  ({getDaysRemaining(restockExpiryDate)} days from today)
+                </p>
+              )}
+            </div>
+
             <div className="p-3 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs">
-              New total will be:{" "}
+              Updated Total Stock:{" "}
               <strong className="font-mono">
                 {restockMedicine.currentStock + (parseInt(restockAmount, 10) || 0)} {restockMedicine.unit}s
               </strong>
@@ -669,7 +874,7 @@ export default function MedicinesPage() {
                 disabled={isRestocking}
                 className="px-4 py-2 text-xs font-bold rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs shadow-emerald-200 cursor-pointer"
               >
-                {isRestocking ? "Updating Stock..." : "Confirm Restock"}
+                {isRestocking ? "Saving Batch..." : "Confirm Shipment"}
               </button>
             </div>
           </form>
