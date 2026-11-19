@@ -16,6 +16,8 @@ import {
   Calendar,
   Eye,
   CheckCircle2,
+  AlertTriangle,
+  PackagePlus,
 } from "lucide-react";
 import { SalesChart } from "@/components/dashboard/SalesChart";
 import { ReceiptModal } from "@/components/pos/ReceiptModal";
@@ -54,10 +56,10 @@ export default function DashboardPage() {
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-white p-4 rounded-xl border border-slate-200 shadow-xs">
         <div>
           <h2 className="text-base font-bold text-slate-900">
-            Shodesh Pharmacy Sales Overview
+            Pharmacy Sales Overview
           </h2>
           <p className="text-xs text-slate-500">
-            Showing performance metrics for:{" "}
+            Performance metrics for:{" "}
             <span className="font-semibold text-slate-700">
               {rangeLabels[selectedRange]}
             </span>
@@ -94,15 +96,15 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* 4 Summary Stat Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      {/* 5 Summary Stat Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3.5">
         {/* Card 1: Revenue */}
         <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs flex items-center justify-between">
           <div>
             <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
               Sales Revenue
             </span>
-            <p className="text-2xl font-bold font-mono text-slate-900 mt-1">
+            <p className="text-xl font-bold font-mono text-slate-900 mt-1">
               {isLoading ? "..." : formatCurrency(metrics?.totalRevenue || 0)}
             </p>
             <span className="text-[11px] text-emerald-600 font-medium flex items-center gap-1 mt-0.5">
@@ -110,8 +112,8 @@ export default function DashboardPage() {
               <span>{rangeLabels[selectedRange]}</span>
             </span>
           </div>
-          <div className="w-12 h-12 rounded-xl bg-emerald-50 text-emerald-600 border border-emerald-100 flex items-center justify-center">
-            <DollarSign className="w-6 h-6" />
+          <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 border border-emerald-100 flex items-center justify-center">
+            <DollarSign className="w-5 h-5" />
           </div>
         </div>
 
@@ -121,15 +123,15 @@ export default function DashboardPage() {
             <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
               Transactions
             </span>
-            <p className="text-2xl font-bold font-mono text-slate-900 mt-1">
+            <p className="text-xl font-bold font-mono text-slate-900 mt-1">
               {isLoading ? "..." : metrics?.totalTransactions || 0}
             </p>
             <span className="text-[11px] text-slate-500 mt-0.5 block">
               Completed cash memos
             </span>
           </div>
-          <div className="w-12 h-12 rounded-xl bg-blue-50 text-blue-600 border border-blue-100 flex items-center justify-center">
-            <ShoppingBag className="w-6 h-6" />
+          <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 border border-blue-100 flex items-center justify-center">
+            <ShoppingBag className="w-5 h-5" />
           </div>
         </div>
 
@@ -139,7 +141,7 @@ export default function DashboardPage() {
             <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
               Average Ticket
             </span>
-            <p className="text-2xl font-bold font-mono text-slate-900 mt-1">
+            <p className="text-xl font-bold font-mono text-slate-900 mt-1">
               {isLoading
                 ? "..."
                 : formatCurrency(metrics?.averageTransactionValue || 0)}
@@ -148,8 +150,8 @@ export default function DashboardPage() {
               Per customer receipt
             </span>
           </div>
-          <div className="w-12 h-12 rounded-xl bg-amber-50 text-amber-600 border border-amber-100 flex items-center justify-center">
-            <Receipt className="w-6 h-6" />
+          <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-600 border border-amber-100 flex items-center justify-center">
+            <Receipt className="w-5 h-5" />
           </div>
         </div>
 
@@ -157,19 +159,41 @@ export default function DashboardPage() {
         <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs flex items-center justify-between">
           <div>
             <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
-              Medicines Dispensed
+              Units Dispensed
             </span>
-            <p className="text-2xl font-bold font-mono text-slate-900 mt-1">
+            <p className="text-xl font-bold font-mono text-slate-900 mt-1">
               {isLoading ? "..." : `${metrics?.totalMedicinesSold || 0} pcs`}
             </p>
             <span className="text-[11px] text-slate-500 mt-0.5 block">
-              Total dosage units sold
+              Total quantity sold
             </span>
           </div>
-          <div className="w-12 h-12 rounded-xl bg-purple-50 text-purple-600 border border-purple-100 flex items-center justify-center">
-            <Pill className="w-6 h-6" />
+          <div className="w-10 h-10 rounded-xl bg-purple-50 text-purple-600 border border-purple-100 flex items-center justify-center">
+            <Pill className="w-5 h-5" />
           </div>
         </div>
+
+        {/* Card 5: Low Stock Alert (Level 1 Stock) */}
+        <Link
+          href="/dashboard/medicines"
+          className="bg-white p-4 rounded-xl border border-slate-200 hover:border-amber-400 shadow-xs flex items-center justify-between transition-colors group cursor-pointer"
+        >
+          <div>
+            <span className="text-[11px] font-bold uppercase tracking-wider text-amber-800 flex items-center gap-1">
+              <AlertTriangle className="w-3 h-3 text-amber-600" />
+              Stock Alert
+            </span>
+            <p className="text-xl font-bold font-mono text-amber-700 mt-1">
+              {isLoading ? "..." : `${metrics?.lowStockCount || 0} items`}
+            </p>
+            <span className="text-[11px] text-amber-600 font-medium group-hover:underline mt-0.5 block">
+              Click to reorder →
+            </span>
+          </div>
+          <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-600 border border-amber-200 flex items-center justify-center">
+            <PackagePlus className="w-5 h-5" />
+          </div>
+        </Link>
       </div>
 
       {/* Middle Grid: Charts and Top-Selling Medicines */}
@@ -235,80 +259,135 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* Bottom: Recent Transactions Table */}
-      <div className="bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden">
-        <div className="px-5 py-4 border-b border-slate-200 flex items-center justify-between bg-slate-50/50">
-          <div>
-            <h3 className="text-sm font-bold text-slate-900">
-              Recent Completed Sales
-            </h3>
-            <p className="text-xs text-slate-500">
-              Latest transactions recorded at this pharmacy
-            </p>
+      {/* Bottom Grid: Low Stock Alert Warning Box & Recent Completed Sales */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        {/* Low Stock Warning Card (1 col) */}
+        <div className="bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden flex flex-col">
+          <div className="px-5 py-4 border-b border-slate-200 bg-amber-50/50 flex items-center justify-between">
+            <div>
+              <h3 className="text-sm font-bold text-amber-900 flex items-center gap-1.5">
+                <AlertTriangle className="w-4 h-4 text-amber-600" />
+                <span>Reorder Alerts</span>
+              </h3>
+              <p className="text-xs text-amber-700">Stock below reorder limit</p>
+            </div>
+            <Link
+              href="/dashboard/medicines"
+              className="text-xs font-semibold text-amber-800 hover:underline"
+            >
+              Restock All
+            </Link>
           </div>
 
-          <Link
-            href="/dashboard/sales"
-            className="flex items-center gap-1 text-xs font-bold text-emerald-700 hover:text-emerald-800"
-          >
-            <span>View All Sales</span>
-            <ArrowRight className="w-3.5 h-3.5" />
-          </Link>
+          <div className="p-4 flex-1 overflow-y-auto divide-y divide-slate-100 space-y-2">
+            {!metrics?.lowStockMedicines || metrics.lowStockMedicines.length === 0 ? (
+              <div className="py-8 text-center text-slate-400 text-xs">
+                All medicines are sufficiently stocked!
+              </div>
+            ) : (
+              metrics.lowStockMedicines.slice(0, 5).map((med) => (
+                <div key={med.id} className="pt-2 flex items-center justify-between">
+                  <div>
+                    <h5 className="text-xs font-bold text-slate-900">{med.name}</h5>
+                    <p className="text-[11px] text-slate-500">
+                      {med.strength} • {med.shelfLocation || "Rack N/A"}
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <span
+                      className={`font-mono font-bold text-xs px-2 py-0.5 rounded-full ${
+                        med.currentStock <= 0
+                          ? "bg-rose-50 text-rose-700 border border-rose-200"
+                          : "bg-amber-50 text-amber-700 border border-amber-200"
+                      }`}
+                    >
+                      {med.currentStock} {med.unit}s
+                    </span>
+                    <span className="block text-[10px] text-slate-400 mt-0.5">
+                      Min: {med.minStockAlert}
+                    </span>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs border-collapse">
-            <thead>
-              <tr className="border-b border-slate-200 bg-slate-50/80 text-slate-500 font-semibold uppercase text-[10px] tracking-wider">
-                <th className="py-2.5 px-4">Invoice #</th>
-                <th className="py-2.5 px-4">Time</th>
-                <th className="py-2.5 px-4">Cashier</th>
-                <th className="py-2.5 px-4">Items</th>
-                <th className="py-2.5 px-4">Payment</th>
-                <th className="py-2.5 px-4 text-right">Total</th>
-                <th className="py-2.5 px-4 text-center">Status</th>
-                <th className="py-2.5 px-4 text-right">Action</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {metrics?.recentTransactions.map((sale) => (
-                <tr key={sale.id} className="hover:bg-slate-50/80 transition-colors">
-                  <td className="py-2.5 px-4 font-mono font-bold text-slate-900">
-                    {sale.invoiceNumber}
-                  </td>
-                  <td className="py-2.5 px-4 text-slate-600 font-mono text-[11px]">
-                    {formatDateTime(sale.createdAt)}
-                  </td>
-                  <td className="py-2.5 px-4 text-slate-700">{sale.cashierName}</td>
-                  <td className="py-2.5 px-4 text-slate-600">
-                    {sale.totalItems} pcs ({sale.items.length} lines)
-                  </td>
-                  <td className="py-2.5 px-4">
-                    <span className="font-medium text-slate-700">
-                      {sale.paymentMethod}
-                    </span>
-                  </td>
-                  <td className="py-2.5 px-4 text-right font-mono font-bold text-slate-900">
-                    {formatCurrency(sale.totalAmount)}
-                  </td>
-                  <td className="py-2.5 px-4 text-center">
-                    <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
-                      <CheckCircle2 className="w-3 h-3" /> Completed
-                    </span>
-                  </td>
-                  <td className="py-2.5 px-4 text-right">
-                    <button
-                      onClick={() => setSelectedReceipt(sale)}
-                      className="p-1 text-slate-500 hover:text-emerald-700 hover:bg-slate-100 rounded transition-colors"
-                      title="View Receipt"
-                    >
-                      <Eye className="w-4 h-4" />
-                    </button>
-                  </td>
+        {/* Recent Transactions Table (2 cols) */}
+        <div className="lg:col-span-2 bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden flex flex-col">
+          <div className="px-5 py-4 border-b border-slate-200 flex items-center justify-between bg-slate-50/50">
+            <div>
+              <h3 className="text-sm font-bold text-slate-900">
+                Recent Completed Sales
+              </h3>
+              <p className="text-xs text-slate-500">
+                Latest transactions recorded at this pharmacy
+              </p>
+            </div>
+
+            <Link
+              href="/dashboard/sales"
+              className="flex items-center gap-1 text-xs font-bold text-emerald-700 hover:text-emerald-800"
+            >
+              <span>View All Sales</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </Link>
+          </div>
+
+          <div className="overflow-x-auto flex-1">
+            <table className="w-full text-left text-xs border-collapse">
+              <thead>
+                <tr className="border-b border-slate-200 bg-slate-50/80 text-slate-500 font-semibold uppercase text-[10px] tracking-wider">
+                  <th className="py-2.5 px-4">Invoice #</th>
+                  <th className="py-2.5 px-4">Time</th>
+                  <th className="py-2.5 px-4">Cashier</th>
+                  <th className="py-2.5 px-4">Items</th>
+                  <th className="py-2.5 px-4">Payment</th>
+                  <th className="py-2.5 px-4 text-right">Total</th>
+                  <th className="py-2.5 px-4 text-center">Status</th>
+                  <th className="py-2.5 px-4 text-right">Action</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {metrics?.recentTransactions.map((sale) => (
+                  <tr key={sale.id} className="hover:bg-slate-50/80 transition-colors">
+                    <td className="py-2.5 px-4 font-mono font-bold text-slate-900">
+                      {sale.invoiceNumber}
+                    </td>
+                    <td className="py-2.5 px-4 text-slate-600 font-mono text-[11px]">
+                      {formatDateTime(sale.createdAt)}
+                    </td>
+                    <td className="py-2.5 px-4 text-slate-700">{sale.cashierName}</td>
+                    <td className="py-2.5 px-4 text-slate-600">
+                      {sale.totalItems} pcs ({sale.items.length} lines)
+                    </td>
+                    <td className="py-2.5 px-4">
+                      <span className="font-medium text-slate-700">
+                        {sale.paymentMethod}
+                      </span>
+                    </td>
+                    <td className="py-2.5 px-4 text-right font-mono font-bold text-slate-900">
+                      {formatCurrency(sale.totalAmount)}
+                    </td>
+                    <td className="py-2.5 px-4 text-center">
+                      <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                        <CheckCircle2 className="w-3 h-3" /> Completed
+                      </span>
+                    </td>
+                    <td className="py-2.5 px-4 text-right">
+                      <button
+                        onClick={() => setSelectedReceipt(sale)}
+                        className="p-1 text-slate-500 hover:text-emerald-700 hover:bg-slate-100 rounded transition-colors cursor-pointer"
+                        title="View Receipt"
+                      >
+                        <Eye className="w-4 h-4" />
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
 

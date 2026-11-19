@@ -85,19 +85,24 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
   const addItem = (medicine: Medicine, qty: number = 1) => {
     if (!medicine.isActive) return;
+    const availableStock = typeof medicine.currentStock === "number" ? medicine.currentStock : 999;
+    if (availableStock <= 0) return; // Cannot add out-of-stock items
+
     setItems((prev) => {
       const existingIndex = prev.findIndex((i) => i.medicineId === medicine.id);
       if (existingIndex > -1) {
         const updated = [...prev];
         const existing = updated[existingIndex];
-        const newQty = existing.quantity + qty;
+        const newQty = Math.min(availableStock, existing.quantity + qty);
         updated[existingIndex] = {
           ...existing,
           quantity: newQty,
+          currentStock: availableStock,
           subtotal: Number((newQty * existing.unitPrice).toFixed(2)),
         };
         return updated;
       } else {
+        const initialQty = Math.min(availableStock, qty);
         const newItem: CartItem = {
           medicineId: medicine.id,
           name: medicine.name,
@@ -106,8 +111,9 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
           dosageForm: medicine.dosageForm,
           unitPrice: medicine.sellingPrice,
           unit: medicine.unit,
-          quantity: qty,
-          subtotal: Number((qty * medicine.sellingPrice).toFixed(2)),
+          quantity: initialQty,
+          currentStock: availableStock,
+          subtotal: Number((initialQty * medicine.sellingPrice).toFixed(2)),
         };
         return [newItem, ...prev];
       }
@@ -119,10 +125,12 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     setItems((prev) =>
       prev.map((item) => {
         if (item.medicineId === medicineId) {
+          const maxAllowed = item.currentStock > 0 ? item.currentStock : 9999;
+          const safeQty = Math.min(maxAllowed, quantity);
           return {
             ...item,
-            quantity,
-            subtotal: Number((quantity * item.unitPrice).toFixed(2)),
+            quantity: safeQty,
+            subtotal: Number((safeQty * item.unitPrice).toFixed(2)),
           };
         }
         return item;

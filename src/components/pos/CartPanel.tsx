@@ -108,9 +108,14 @@ export function CartPanel({ onOpenCheckout }: CartPanelProps) {
                     <h5 className="text-xs font-bold text-slate-900 leading-snug truncate">
                       {item.name}
                     </h5>
-                    <p className="text-[11px] text-slate-500 truncate">
-                      {item.genericName} • {item.strength}
-                    </p>
+                    <div className="flex items-center gap-1.5 text-[11px] text-slate-500">
+                      <span className="truncate">{item.genericName} • {item.strength}</span>
+                      {typeof item.currentStock === "number" && (
+                        <span className="text-[10px] text-slate-400 font-mono">
+                          (Stock: {item.currentStock})
+                        </span>
+                      )}
+                    </div>
                   </div>
                   <div className="text-right shrink-0">
                     <span className="text-xs font-mono font-bold text-slate-900">
@@ -155,9 +160,18 @@ export function CartPanel({ onOpenCheckout }: CartPanelProps) {
 
                     <button
                       type="button"
+                      disabled={item.currentStock !== undefined && item.quantity >= item.currentStock}
                       onClick={() => updateQuantity(item.medicineId, item.quantity + 1)}
-                      className="w-6 h-6 rounded flex items-center justify-center text-slate-600 hover:bg-white hover:text-slate-900 transition-colors"
-                      title="Increase quantity"
+                      className={`w-6 h-6 rounded flex items-center justify-center transition-colors ${
+                        item.currentStock !== undefined && item.quantity >= item.currentStock
+                          ? "text-slate-300 cursor-not-allowed bg-slate-100"
+                          : "text-slate-600 hover:bg-white hover:text-slate-900 cursor-pointer"
+                      }`}
+                      title={
+                        item.currentStock !== undefined && item.quantity >= item.currentStock
+                          ? "Max available stock reached"
+                          : "Increase quantity"
+                      }
                     >
                       <Plus className="w-3 h-3" />
                     </button>

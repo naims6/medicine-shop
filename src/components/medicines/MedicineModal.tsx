@@ -40,6 +40,8 @@ const medicineSchema = z.object({
   sellingPrice: z.coerce.number().positive("Price must be greater than 0"),
   unit: z.string().min(1, "Unit is required (e.g. Piece, Bottle, Strip)"),
   shelfLocation: z.string().optional(),
+  currentStock: z.coerce.number().min(0, "Stock cannot be negative"),
+  minStockAlert: z.coerce.number().min(0, "Alert threshold cannot be negative"),
   isActive: z.boolean(),
 });
 
@@ -103,6 +105,8 @@ export function MedicineModal({
       sellingPrice: 1.0,
       unit: "Piece",
       shelfLocation: "",
+      currentStock: 50,
+      minStockAlert: 20,
       isActive: true,
     },
   });
@@ -119,6 +123,8 @@ export function MedicineModal({
         sellingPrice: initialData.sellingPrice,
         unit: initialData.unit,
         shelfLocation: initialData.shelfLocation || "",
+        currentStock: initialData.currentStock ?? 50,
+        minStockAlert: initialData.minStockAlert ?? 20,
         isActive: initialData.isActive,
       });
     } else {
@@ -132,6 +138,8 @@ export function MedicineModal({
         sellingPrice: 1.0,
         unit: "Piece",
         shelfLocation: "",
+        currentStock: 50,
+        minStockAlert: 20,
         isActive: true,
       });
     }
@@ -303,6 +311,47 @@ export function MedicineModal({
               placeholder="e.g. Rack A-04, Drawer 2"
               className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500"
             />
+          </div>
+        </div>
+
+        {/* Level 1: Current Stock & Low Stock Alert */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3 bg-slate-50 rounded-xl border border-slate-200">
+          <div>
+            <label className="block text-xs font-semibold text-slate-700 mb-1">
+              Current Available Stock *
+            </label>
+            <input
+              type="number"
+              min="0"
+              {...register("currentStock")}
+              placeholder="e.g. 100"
+              className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs font-mono font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            />
+            {errors.currentStock && (
+              <p className="text-[11px] text-rose-600 mt-1">{errors.currentStock.message}</p>
+            )}
+            <span className="text-[10px] text-slate-400 mt-0.5 block">
+              Units currently on shelves
+            </span>
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-slate-700 mb-1">
+              Low Stock Alert Limit *
+            </label>
+            <input
+              type="number"
+              min="0"
+              {...register("minStockAlert")}
+              placeholder="e.g. 20"
+              className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs font-mono font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            />
+            {errors.minStockAlert && (
+              <p className="text-[11px] text-rose-600 mt-1">{errors.minStockAlert.message}</p>
+            )}
+            <span className="text-[10px] text-slate-400 mt-0.5 block">
+              Alert when stock drops to or below this
+            </span>
           </div>
         </div>
 

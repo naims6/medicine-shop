@@ -14,6 +14,7 @@ import {
   Receipt,
 } from "lucide-react";
 import { salesRepository } from "@/repositories/salesRepository";
+import { medicineRepository } from "@/repositories/medicineRepository";
 import { useCart } from "@/stores/CartContext";
 import { useAuth } from "@/stores/AuthContext";
 
@@ -111,6 +112,14 @@ function CheckoutModalContent({
         notes: referenceNote.trim() || undefined,
         status: "completed",
       });
+
+      // Automatically deduct physical stock in real time
+      await medicineRepository.deductStock(
+        items.map((i) => ({
+          medicineId: i.medicineId,
+          quantity: i.quantity,
+        }))
+      );
 
       clearCart();
       onClose();

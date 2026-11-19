@@ -10,6 +10,7 @@ import {
   Pill,
   X,
   Filter,
+  AlertTriangle,
 } from "lucide-react";
 import { medicineRepository } from "@/repositories/medicineRepository";
 import { useCart } from "@/stores/CartContext";
@@ -31,6 +32,7 @@ export function MedicineSearch({ searchInputRef }: MedicineSearchProps) {
   const [query, setQuery] = useState("");
   const [selectedForm, setSelectedForm] = useState<DosageForm | "All">("All");
   const [selectedCategory, setSelectedCategory] = useState<string>("All");
+  const [stockFilter, setStockFilter] = useState<"all" | "low">("all");
   const [medicines, setMedicines] = useState<Medicine[]>([]);
   const [categories, setCategories] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -52,18 +54,19 @@ export function MedicineSearch({ searchInputRef }: MedicineSearchProps) {
     loadData();
   }, []);
 
-  // Filter medicines when query, dosage form, or category changes
+  // Filter medicines when query, dosage form, category, or stock filter changes
   useEffect(() => {
     async function filterMeds() {
       const results = await medicineRepository.search(query, {
         dosageForm: selectedForm,
         category: selectedCategory,
+        stockFilter: stockFilter === "low" ? "low" : undefined,
         includeInactive: false,
       });
       setMedicines(results);
     }
     filterMeds();
-  }, [query, selectedForm, selectedCategory]);
+  }, [query, selectedForm, selectedCategory, stockFilter]);
 
   // Map medicineId -> quantity in cart for instant feedback
   const inCartMap = new Map<string, number>();
@@ -96,7 +99,7 @@ export function MedicineSearch({ searchInputRef }: MedicineSearchProps) {
           )}
         </div>
 
-        {/* Quick Filter Badges */}
+        {/* Filters Row */}
         <div className="flex items-center justify-between gap-2 flex-wrap">
           <div className="flex items-center gap-1.5 overflow-x-auto pb-1 max-w-full">
             {commonForms.map((form) => (
@@ -112,6 +115,19 @@ export function MedicineSearch({ searchInputRef }: MedicineSearchProps) {
                 {form}
               </button>
             ))}
+
+            {/* Quick Low Stock Toggle */}
+            <button
+              onClick={() => setStockFilter(stockFilter === "low" ? "all" : "low")}
+              className={`px-2.5 py-1 text-xs rounded-md font-semibold transition-colors shrink-0 flex items-center gap-1 cursor-pointer ${
+                stockFilter === "low"
+                  ? "bg-amber-600 text-white shadow-xs"
+                  : "bg-amber-50 text-amber-700 hover:bg-amber-100 border border-amber-200"
+              }`}
+            >
+              <AlertTriangle className="w-3 h-3" />
+              <span>Low Stock</span>
+            </button>
           </div>
 
           {/* Category Dropdown */}
@@ -148,14 +164,15 @@ export function MedicineSearch({ searchInputRef }: MedicineSearchProps) {
               No matching medicines found
             </h4>
             <p className="text-xs text-slate-500 max-w-xs mt-1">
-              Try searching with a generic name (e.g. &quot;Paracetamol&quot; or &quot;Omeprazole&quot;) or clear the filter.
+              Try searching with a generic name or reset filters.
             </p>
-            {(query || selectedForm !== "All" || selectedCategory !== "All") && (
+            {(query || selectedForm !== "All" || selectedCategory !== "All" || stockFilter !== "all") && (
               <button
                 onClick={() => {
                   setQuery("");
                   setSelectedForm("All");
                   setSelectedCategory("All");
+                  setStockFilter("all");
                 }}
                 className="mt-3 px-3 py-1.5 text-xs font-medium text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-md hover:bg-emerald-100"
               >
@@ -167,14 +184,24 @@ export function MedicineSearch({ searchInputRef }: MedicineSearchProps) {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
             {medicines.map((med) => {
               const inCartQty = inCartMap.get(med.id) || 0;
+              const isOutOfStock = med.currentStock <= 0;
+              const isLowStock = med.currentStock > 0 && med.currentStock <= med.minStockAlert;
+              const isMaxInCart = inCartQty >= med.currentStock;
+
               return (
                 <div
                   key={med.id}
-                  onClick={() => addItem(med, 1)}
-                  className={`p-3 rounded-lg border transition-all text-left flex flex-col justify-between cursor-pointer select-none group ${
-                    inCartQty > 0
-                      ? "border-emerald-300 bg-emerald-50/30 hover:border-emerald-500 hover:bg-emerald-50/50"
-                      : "border-slate-200 bg-white hover:border-slate-300 hover:shadow-xs"
+                  onClick={() => {
+                    if (!isOutOfStock && !isMaxInCart) {
+                      addItem(med, 1);
+                    }
+                  }}
+                  className={`p-3 rounded-lg border transition-all text-left flex flex-col justify-between select-none group ${
+                    isOutOfStock
+                      ? "border-slate-200 bg-slate-50/80 opacity-60 cursor-not-allowed"
+                      : inCartQty > 0
+                      ? "border-emerald-300 bg-emerald-50/30 hover:border-emerald-500 hover:bg-emerald-50/50 cursor-pointer"
+                      : "border-slate-200 bg-white hover:border-slate-300 hover:shadow-xs cursor-pointer"
                   }`}
                 >
                   <div>
@@ -193,13 +220,31 @@ export function MedicineSearch({ searchInputRef }: MedicineSearchProps) {
                       </span>
                     </div>
 
-                    {/* Strength & Manufacturer */}
-                    <div className="mt-1.5 flex items-center gap-2 text-[11px] text-slate-500">
+                    {/* Strength, Manufacturer & Live Stock Badge */}
+                    <div className="mt-1.5 flex flex-wrap items-center gap-1.5 text-[11px]">
                       <span className="font-semibold text-slate-700 bg-slate-100 px-1.5 py-0.2 rounded">
                         {med.strength}
                       </span>
-                      <span>•</span>
-                      <span className="truncate">{med.manufacturer.split(" ")[0]}</span>
+                      <span className="text-slate-300">•</span>
+                      <span className="text-slate-500 truncate max-w-[100px]">
+                        {med.manufacturer.split(" ")[0]}
+                      </span>
+                      <span className="text-slate-300">•</span>
+
+                      {/* Stock Status Badge */}
+                      {isOutOfStock ? (
+                        <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-rose-50 text-rose-700 border border-rose-200">
+                          Out of Stock
+                        </span>
+                      ) : isLowStock ? (
+                        <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-amber-50 text-amber-700 border border-amber-200">
+                          Low: {med.currentStock} left
+                        </span>
+                      ) : (
+                        <span className="text-[10px] font-medium text-emerald-700 bg-emerald-50 px-1.5 py-0.2 rounded border border-emerald-100">
+                          Stock: {med.currentStock}
+                        </span>
+                      )}
                     </div>
                   </div>
 
@@ -226,16 +271,29 @@ export function MedicineSearch({ searchInputRef }: MedicineSearchProps) {
 
                       <button
                         type="button"
+                        disabled={isOutOfStock || isMaxInCart}
                         onClick={(e) => {
                           e.stopPropagation();
-                          addItem(med, 1);
+                          if (!isOutOfStock && !isMaxInCart) {
+                            addItem(med, 1);
+                          }
                         }}
-                        className={`w-7 h-7 rounded-md flex items-center justify-center transition-colors cursor-pointer ${
-                          inCartQty > 0
-                            ? "bg-emerald-600 text-white hover:bg-emerald-700 shadow-xs"
-                            : "bg-slate-100 hover:bg-emerald-600 hover:text-white text-slate-600"
+                        className={`w-7 h-7 rounded-md flex items-center justify-center transition-colors ${
+                          isOutOfStock
+                            ? "bg-slate-200 text-slate-400 cursor-not-allowed"
+                            : isMaxInCart
+                            ? "bg-amber-600 text-white cursor-not-allowed"
+                            : inCartQty > 0
+                            ? "bg-emerald-600 text-white hover:bg-emerald-700 shadow-xs cursor-pointer"
+                            : "bg-slate-100 hover:bg-emerald-600 hover:text-white text-slate-600 cursor-pointer"
                         }`}
-                        title="Add to cart"
+                        title={
+                          isOutOfStock
+                            ? "Out of stock"
+                            : isMaxInCart
+                            ? `All ${med.currentStock} in stock added to cart`
+                            : "Add to cart"
+                        }
                       >
                         {inCartQty > 0 ? (
                           <span className="text-xs font-bold">{inCartQty}</span>
@@ -255,7 +313,7 @@ export function MedicineSearch({ searchInputRef }: MedicineSearchProps) {
       {/* Footer Status */}
       <div className="px-4 py-2 border-t border-slate-200 bg-slate-50 text-[11px] text-slate-500 flex items-center justify-between">
         <span>Showing {medicines.length} medicines</span>
-        <span>Click item or press [+] to add to bill</span>
+        <span>Automatic inventory deduction on sale</span>
       </div>
     </div>
   );

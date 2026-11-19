@@ -4,7 +4,7 @@ import React from "react";
 import { Medicine } from "@/types";
 import { formatCurrency } from "@/lib/utils";
 import { Modal } from "@/components/ui/Modal";
-import { Pill, Building2, MapPin, Tag, CheckCircle2, XCircle } from "lucide-react";
+import { Pill, Building2, MapPin, Tag, CheckCircle2, XCircle, Package, AlertTriangle } from "lucide-react";
 
 interface MedicineDetailModalProps {
   isOpen: boolean;
@@ -83,6 +83,26 @@ export function MedicineDetailModal({
             </div>
             <p className="font-semibold text-slate-900">
               {medicine.shelfLocation || "Unassigned"}
+            </p>
+          </div>
+
+          <div className="p-3 bg-white border border-slate-200 rounded-lg space-y-1">
+            <div className="flex items-center gap-1.5 text-slate-400 font-medium">
+              <Package className="w-3.5 h-3.5" />
+              <span>Current Stock</span>
+            </div>
+            <p className="font-mono font-bold text-slate-900">
+              {medicine.currentStock ?? 0} {medicine.unit}s
+            </p>
+          </div>
+
+          <div className="p-3 bg-white border border-slate-200 rounded-lg space-y-1">
+            <div className="flex items-center gap-1.5 text-slate-400 font-medium">
+              <AlertTriangle className="w-3.5 h-3.5" />
+              <span>Alert Threshold</span>
+            </div>
+            <p className="font-mono font-bold text-amber-700">
+              {medicine.minStockAlert ?? 20} {medicine.unit}s
             </p>
           </div>
         </div>

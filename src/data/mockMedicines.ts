@@ -13,6 +13,8 @@ export const initialMedicines: Medicine[] = [
     unit: "Piece",
     isActive: true,
     shelfLocation: "Rack A-01",
+    currentStock: 350,
+    minStockAlert: 50,
   },
   {
     id: "med-002",
@@ -26,6 +28,8 @@ export const initialMedicines: Medicine[] = [
     unit: "Piece",
     isActive: true,
     shelfLocation: "Rack A-01",
+    currentStock: 420,
+    minStockAlert: 50,
   },
   {
     id: "med-003",
@@ -39,6 +43,8 @@ export const initialMedicines: Medicine[] = [
     unit: "Piece",
     isActive: true,
     shelfLocation: "Rack A-02",
+    currentStock: 18, // Low stock
+    minStockAlert: 30,
   },
   {
     id: "med-004",
@@ -52,6 +58,8 @@ export const initialMedicines: Medicine[] = [
     unit: "Piece",
     isActive: true,
     shelfLocation: "Rack A-03",
+    currentStock: 280,
+    minStockAlert: 40,
   },
   {
     id: "med-005",
@@ -65,6 +73,8 @@ export const initialMedicines: Medicine[] = [
     unit: "Piece",
     isActive: true,
     shelfLocation: "Rack A-03",
+    currentStock: 300,
+    minStockAlert: 40,
   },
   {
     id: "med-006",
@@ -78,6 +88,8 @@ export const initialMedicines: Medicine[] = [
     unit: "Piece",
     isActive: true,
     shelfLocation: "Rack B-01",
+    currentStock: 190,
+    minStockAlert: 30,
   },
   {
     id: "med-007",
@@ -91,6 +103,8 @@ export const initialMedicines: Medicine[] = [
     unit: "Piece",
     isActive: true,
     shelfLocation: "Rack B-01",
+    currentStock: 65,
+    minStockAlert: 20,
   },
   {
     id: "med-008",
@@ -104,6 +118,8 @@ export const initialMedicines: Medicine[] = [
     unit: "Piece",
     isActive: true,
     shelfLocation: "Rack B-02",
+    currentStock: 140,
+    minStockAlert: 25,
   },
   {
     id: "med-009",
@@ -117,6 +133,8 @@ export const initialMedicines: Medicine[] = [
     unit: "Piece",
     isActive: true,
     shelfLocation: "Rack B-03",
+    currentStock: 110,
+    minStockAlert: 25,
   },
   {
     id: "med-010",
@@ -130,6 +148,8 @@ export const initialMedicines: Medicine[] = [
     unit: "Piece",
     isActive: true,
     shelfLocation: "Rack B-04",
+    currentStock: 85,
+    minStockAlert: 20,
   },
   {
     id: "med-011",
@@ -143,6 +163,8 @@ export const initialMedicines: Medicine[] = [
     unit: "Piece",
     isActive: true,
     shelfLocation: "Rack C-01",
+    currentStock: 160,
+    minStockAlert: 30,
   },
   {
     id: "med-012",
@@ -156,6 +178,8 @@ export const initialMedicines: Medicine[] = [
     unit: "Piece",
     isActive: true,
     shelfLocation: "Rack C-02",
+    currentStock: 90,
+    minStockAlert: 20,
   },
   {
     id: "med-013",
@@ -169,6 +193,8 @@ export const initialMedicines: Medicine[] = [
     unit: "Piece",
     isActive: true,
     shelfLocation: "Rack C-03",
+    currentStock: 75,
+    minStockAlert: 20,
   },
   {
     id: "med-014",
@@ -182,6 +208,8 @@ export const initialMedicines: Medicine[] = [
     unit: "Piece",
     isActive: true,
     shelfLocation: "Rack D-01",
+    currentStock: 220,
+    minStockAlert: 40,
   },
   {
     id: "med-015",
@@ -195,6 +223,8 @@ export const initialMedicines: Medicine[] = [
     unit: "Bottle",
     isActive: true,
     shelfLocation: "Syrup Shelf S-01",
+    currentStock: 24,
+    minStockAlert: 10,
   },
   {
     id: "med-016",
@@ -208,6 +238,8 @@ export const initialMedicines: Medicine[] = [
     unit: "Piece",
     isActive: true,
     shelfLocation: "Rack D-02",
+    currentStock: 130,
+    minStockAlert: 25,
   },
   {
     id: "med-017",
@@ -221,6 +253,8 @@ export const initialMedicines: Medicine[] = [
     unit: "Piece",
     isActive: true,
     shelfLocation: "Rack A-05",
+    currentStock: 7, // Low stock
+    minStockAlert: 15,
   },
   {
     id: "med-018",
@@ -234,6 +268,8 @@ export const initialMedicines: Medicine[] = [
     unit: "Piece",
     isActive: true,
     shelfLocation: "Rack E-01",
+    currentStock: 6, // Low stock
+    minStockAlert: 15,
   },
   {
     id: "med-019",
@@ -247,6 +283,8 @@ export const initialMedicines: Medicine[] = [
     unit: "Piece",
     isActive: true,
     shelfLocation: "Rack E-02",
+    currentStock: 12, // Low stock
+    minStockAlert: 20,
   },
   {
     id: "med-020",
@@ -260,6 +298,8 @@ export const initialMedicines: Medicine[] = [
     unit: "Piece",
     isActive: true,
     shelfLocation: "Rack E-03",
+    currentStock: 180,
+    minStockAlert: 30,
   },
   {
     id: "med-021",
@@ -273,6 +313,8 @@ export const initialMedicines: Medicine[] = [
     unit: "Piece",
     isActive: true,
     shelfLocation: "Rack A-06",
+    currentStock: 95,
+    minStockAlert: 20,
   },
   {
     id: "med-022",
@@ -286,6 +328,8 @@ export const initialMedicines: Medicine[] = [
     unit: "Piece",
     isActive: true,
     shelfLocation: "Rack D-03",
+    currentStock: 80,
+    minStockAlert: 20,
   },
   {
     id: "med-023",
@@ -299,6 +343,8 @@ export const initialMedicines: Medicine[] = [
     unit: "Piece",
     isActive: true,
     shelfLocation: "Rack B-05",
+    currentStock: 150,
+    minStockAlert: 30,
   },
   {
     id: "med-024",
@@ -312,6 +358,8 @@ export const initialMedicines: Medicine[] = [
     unit: "Piece",
     isActive: true,
     shelfLocation: "Rack F-01",
+    currentStock: 50,
+    minStockAlert: 15,
   },
   {
     id: "med-025",
@@ -325,6 +373,8 @@ export const initialMedicines: Medicine[] = [
     unit: "Bottle",
     isActive: true,
     shelfLocation: "Syrup Shelf S-02",
+    currentStock: 0, // Out of stock
+    minStockAlert: 8,
   },
   {
     id: "med-026",
@@ -338,5 +388,7 @@ export const initialMedicines: Medicine[] = [
     unit: "Tube",
     isActive: true,
     shelfLocation: "Ointment Box O-01",
+    currentStock: 18,
+    minStockAlert: 10,
   },
 ];

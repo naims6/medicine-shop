@@ -1,7 +1,7 @@
 import { Medicine } from "@/types";
 import { initialMedicines } from "@/data/mockMedicines";
 
-const STORAGE_KEY = "pharmacare_medicines_v1";
+const STORAGE_KEY = "shodesh_medicines_v2";
 
 function getStoredMedicines(): Medicine[] {
   if (typeof window === "undefined") {
@@ -18,7 +18,11 @@ function getStoredMedicines(): Medicine[] {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(initialMedicines));
       return initialMedicines;
     }
-    return parsed;
+    return parsed.map((m: Record<string, unknown>) => ({
+      ...m,
+      currentStock: typeof m.currentStock === "number" ? m.currentStock : 50,
+      minStockAlert: typeof m.minStockAlert === "number" ? m.minStockAlert : 20,
+    })) as Medicine[];
   } catch (err) {
     console.error("Failed to load medicines from localStorage:", err);
     return initialMedicines;
@@ -37,10 +41,14 @@ function saveStoredMedicines(medicines: Medicine[]): void {
 export interface IMedicineRepository {
   getAll(includeInactive?: boolean): Promise<Medicine[]>;
   getById(id: string): Promise<Medicine | null>;
-  search(query: string, options?: { category?: string; dosageForm?: string; includeInactive?: boolean }): Promise<Medicine[]>;
+  search(query: string, options?: { category?: string; dosageForm?: string; stockFilter?: "all" | "low" | "out"; includeInactive?: boolean }): Promise<Medicine[]>;
   create(data: Omit<Medicine, "id">): Promise<Medicine>;
   update(id: string, updates: Partial<Medicine>): Promise<Medicine>;
   toggleActive(id: string): Promise<Medicine>;
+  deductStock(items: { medicineId: string; quantity: number }[]): Promise<void>;
+  addStock(medicineId: string, quantityToAdd: number): Promise<Medicine>;
+  updateStock(medicineId: string, newStock: number): Promise<Medicine>;
+  getLowStockMedicines(): Promise<Medicine[]>;
   resetToDefault(): Promise<void>;
 }
 
@@ -59,7 +67,12 @@ export const medicineRepository: IMedicineRepository = {
 
   async search(
     query: string,
-    options?: { category?: string; dosageForm?: string; includeInactive?: boolean }
+    options?: {
+      category?: string;
+      dosageForm?: string;
+      stockFilter?: "all" | "low" | "out";
+      includeInactive?: boolean;
+    }
   ): Promise<Medicine[]> {
     const medicines = getStoredMedicines();
     const q = query.trim().toLowerCase();
@@ -72,6 +85,15 @@ export const medicineRepository: IMedicineRepository = {
       if (options?.dosageForm && options.dosageForm !== "All" && m.dosageForm !== options.dosageForm) {
         return false;
       }
+
+      // Stock status filters
+      if (options?.stockFilter === "low" && (m.currentStock <= 0 || m.currentStock > m.minStockAlert)) {
+        return false;
+      }
+      if (options?.stockFilter === "out" && m.currentStock > 0) {
+        return false;
+      }
+
       if (!q) return true;
 
       return (
@@ -89,6 +111,8 @@ export const medicineRepository: IMedicineRepository = {
       ...data,
       id: `med-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
       isActive: data.isActive !== undefined ? data.isActive : true,
+      currentStock: Number(data.currentStock) || 0,
+      minStockAlert: Number(data.minStockAlert) || 20,
     };
     const updated = [newMedicine, ...medicines];
     saveStoredMedicines(updated);
@@ -101,7 +125,12 @@ export const medicineRepository: IMedicineRepository = {
     if (index === -1) {
       throw new Error(`Medicine with id ${id} not found`);
     }
-    const updatedItem = { ...medicines[index], ...updates };
+    const updatedItem = {
+      ...medicines[index],
+      ...updates,
+      currentStock: updates.currentStock !== undefined ? Number(updates.currentStock) : medicines[index].currentStock,
+      minStockAlert: updates.minStockAlert !== undefined ? Number(updates.minStockAlert) : medicines[index].minStockAlert,
+    };
     medicines[index] = updatedItem;
     saveStoredMedicines(medicines);
     return updatedItem;
@@ -116,6 +145,52 @@ export const medicineRepository: IMedicineRepository = {
     medicines[index].isActive = !medicines[index].isActive;
     saveStoredMedicines(medicines);
     return medicines[index];
+  },
+
+  async deductStock(items: { medicineId: string; quantity: number }[]): Promise<void> {
+    const medicines = getStoredMedicines();
+    let hasChanged = false;
+
+    items.forEach((item) => {
+      const idx = medicines.findIndex((m) => m.id === item.medicineId);
+      if (idx > -1) {
+        const current = medicines[idx].currentStock || 0;
+        medicines[idx].currentStock = Math.max(0, current - item.quantity);
+        hasChanged = true;
+      }
+    });
+
+    if (hasChanged) {
+      saveStoredMedicines(medicines);
+    }
+  },
+
+  async addStock(medicineId: string, quantityToAdd: number): Promise<Medicine> {
+    const medicines = getStoredMedicines();
+    const index = medicines.findIndex((m) => m.id === medicineId);
+    if (index === -1) {
+      throw new Error(`Medicine with id ${medicineId} not found`);
+    }
+    const safeAdd = Math.max(0, quantityToAdd);
+    medicines[index].currentStock = (medicines[index].currentStock || 0) + safeAdd;
+    saveStoredMedicines(medicines);
+    return medicines[index];
+  },
+
+  async updateStock(medicineId: string, newStock: number): Promise<Medicine> {
+    const medicines = getStoredMedicines();
+    const index = medicines.findIndex((m) => m.id === medicineId);
+    if (index === -1) {
+      throw new Error(`Medicine with id ${medicineId} not found`);
+    }
+    medicines[index].currentStock = Math.max(0, newStock);
+    saveStoredMedicines(medicines);
+    return medicines[index];
+  },
+
+  async getLowStockMedicines(): Promise<Medicine[]> {
+    const medicines = getStoredMedicines();
+    return medicines.filter((m) => m.isActive && m.currentStock <= m.minStockAlert);
   },
 
   async resetToDefault(): Promise<void> {

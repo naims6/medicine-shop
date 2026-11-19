@@ -1,5 +1,6 @@
 import { Sale, DashboardMetrics, PaymentMethod } from "@/types";
 import { initialSales } from "@/data/mockSales";
+import { medicineRepository } from "./medicineRepository";
 
 const SALES_STORAGE_KEY = "pharmacare_sales_v1";
 
@@ -247,6 +248,8 @@ export const salesRepository: ISalesRepository = {
     }));
 
     const recentTransactions = allSales.slice(0, 6);
+    const lowStockMedicines = await medicineRepository.getLowStockMedicines();
+    const lowStockCount = lowStockMedicines.length;
 
     return {
       totalRevenue,
@@ -257,6 +260,8 @@ export const salesRepository: ISalesRepository = {
       monthlySales,
       topSellingMedicines,
       recentTransactions,
+      lowStockCount,
+      lowStockMedicines,
     };
   },
 

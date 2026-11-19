@@ -24,6 +24,8 @@ export interface Medicine {
   unit: string;
   isActive: boolean;
   shelfLocation?: string;
+  currentStock: number;
+  minStockAlert: number;
 }
 
 export interface CartItem {
@@ -36,6 +38,7 @@ export interface CartItem {
   unit: string;
   quantity: number;
   subtotal: number;
+  currentStock: number;
 }
 
 export interface SaleItemSnapshot {
@@ -86,6 +89,8 @@ export interface DashboardMetrics {
     totalRevenue: number;
   }[];
   recentTransactions: Sale[];
+  lowStockCount: number;
+  lowStockMedicines: Medicine[];
 }
 
 export type UserRole = "cashier" | "admin";
