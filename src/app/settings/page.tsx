@@ -15,7 +15,7 @@ import { salesRepository } from "@/repositories/salesRepository";
 export default function SettingsPage() {
   const [shopName, setShopName] = useState("PharmaCare Medicine & Surgical");
   const [shopAddress, setShopAddress] = useState(
-    "House #12, Road #4, Dhanmondi, Dhaka - 1205"
+    "House #12, Road #4, Dhanmondi, Dhaka - 1205",
   );
   const [phone, setPhone] = useState("+880 1711-234567");
   const [regNumber, setRegNumber] = useState("PH-DH-88492");
@@ -223,7 +223,8 @@ export default function SettingsPage() {
           Demo Data Management
         </h4>
         <p className="text-xs text-slate-600">
-          Reset all medicines, active cart, and sales history back to the fresh Bangladesh pharmacy sample dataset.
+          Reset all medicines, active cart, and sales history back to the fresh
+          Bangladesh pharmacy sample dataset.
         </p>
 
         <button
@@ -232,7 +233,9 @@ export default function SettingsPage() {
           disabled={isResetting}
           className="flex items-center gap-2 px-4 py-2 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs font-semibold transition-colors cursor-pointer"
         >
-          <RotateCcw className={`w-3.5 h-3.5 ${isResetting ? "animate-spin" : ""}`} />
+          <RotateCcw
+            className={`w-3.5 h-3.5 ${isResetting ? "animate-spin" : ""}`}
+          />
           <span>{isResetting ? "Resetting..." : "Reset Demo Data"}</span>
         </button>
       </div>

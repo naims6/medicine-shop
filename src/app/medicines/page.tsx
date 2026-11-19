@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { Medicine, DosageForm } from "@/types";
 import { medicineRepository } from "@/repositories/medicineRepository";
 import { formatCurrency } from "@/lib/utils";
@@ -37,13 +37,17 @@ export default function MedicinesPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [selectedForm, setSelectedForm] = useState<DosageForm | "All">("All");
-  const [statusFilter, setStatusFilter] = useState<"All" | "Active" | "Inactive">("All");
+  const [statusFilter, setStatusFilter] = useState<
+    "All" | "Active" | "Inactive"
+  >("All");
   const [currentPage, setCurrentPage] = useState(1);
 
   // Modals state
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalMode, setModalMode] = useState<"create" | "edit">("create");
-  const [selectedMedicine, setSelectedMedicine] = useState<Medicine | null>(null);
+  const [selectedMedicine, setSelectedMedicine] = useState<Medicine | null>(
+    null,
+  );
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [detailMedicine, setDetailMedicine] = useState<Medicine | null>(null);
 
@@ -73,7 +77,8 @@ export default function MedicinesPage() {
   const filteredMedicines = useMemo(() => {
     const q = searchQuery.toLowerCase().trim();
     return medicines.filter((m) => {
-      if (selectedCategory !== "All" && m.category !== selectedCategory) return false;
+      if (selectedCategory !== "All" && m.category !== selectedCategory)
+        return false;
       if (selectedForm !== "All" && m.dosageForm !== selectedForm) return false;
       if (statusFilter === "Active" && !m.isActive) return false;
       if (statusFilter === "Inactive" && m.isActive) return false;
@@ -171,7 +176,9 @@ export default function MedicinesPage() {
         <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-slate-100 text-xs">
           <div className="flex items-center gap-1 text-slate-500 mr-1">
             <Filter className="w-3.5 h-3.5" />
-            <span className="font-semibold text-[11px] uppercase tracking-wider">Filters:</span>
+            <span className="font-semibold text-[11px] uppercase tracking-wider">
+              Filters:
+            </span>
           </div>
 
           {/* Dosage Form Filter */}
@@ -221,7 +228,10 @@ export default function MedicinesPage() {
             <option value="Inactive">Inactive Only</option>
           </select>
 
-          {(searchQuery || selectedCategory !== "All" || selectedForm !== "All" || statusFilter !== "All") && (
+          {(searchQuery ||
+            selectedCategory !== "All" ||
+            selectedForm !== "All" ||
+            statusFilter !== "All") && (
             <button
               onClick={() => {
                 setSearchQuery("");
@@ -258,8 +268,12 @@ export default function MedicinesPage() {
                 <tr>
                   <td colSpan={7} className="py-12 text-center text-slate-400">
                     <Pill className="w-8 h-8 mx-auto mb-2 text-slate-300" />
-                    <p className="font-semibold text-slate-700">No medicines found</p>
-                    <p className="text-[11px] text-slate-400">Try adjusting your search or filter settings</p>
+                    <p className="font-semibold text-slate-700">
+                      No medicines found
+                    </p>
+                    <p className="text-[11px] text-slate-400">
+                      Try adjusting your search or filter settings
+                    </p>
                   </td>
                 </tr>
               ) : (

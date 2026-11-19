@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Sale, PaymentMethod } from "@/types";
 import { salesRepository } from "@/repositories/salesRepository";
 import { formatCurrency, formatDateTime } from "@/lib/utils";
@@ -35,7 +35,9 @@ const ITEMS_PER_PAGE = 8;
 export default function SalesHistoryPage() {
   const [sales, setSales] = useState<Sale[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedPayment, setSelectedPayment] = useState<PaymentMethod | "All">("All");
+  const [selectedPayment, setSelectedPayment] = useState<PaymentMethod | "All">(
+    "All",
+  );
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
@@ -80,7 +82,7 @@ export default function SalesHistoryPage() {
         s.items.some(
           (item) =>
             item.name.toLowerCase().includes(q) ||
-            item.genericName.toLowerCase().includes(q)
+            item.genericName.toLowerCase().includes(q),
         )
       );
     });
@@ -147,7 +149,9 @@ export default function SalesHistoryPage() {
           <p className="text-xl font-bold font-mono text-slate-900 mt-0.5">
             {filteredSales.length}
           </p>
-          <span className="text-[11px] text-slate-400">Total completed sales</span>
+          <span className="text-[11px] text-slate-400">
+            Total completed sales
+          </span>
         </div>
 
         <div className="bg-white p-3.5 rounded-xl border border-slate-200 shadow-xs">
@@ -168,7 +172,7 @@ export default function SalesHistoryPage() {
             {formatCurrency(
               filteredSales.length > 0
                 ? totalFilteredRevenue / filteredSales.length
-                : 0
+                : 0,
             )}
           </p>
           <span className="text-[11px] text-slate-400">Per transaction</span>
@@ -247,7 +251,9 @@ export default function SalesHistoryPage() {
         <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-slate-100 text-xs">
           <div className="flex items-center gap-1 text-slate-500 mr-1">
             <Filter className="w-3.5 h-3.5" />
-            <span className="font-semibold text-[11px] uppercase tracking-wider">Filters:</span>
+            <span className="font-semibold text-[11px] uppercase tracking-wider">
+              Filters:
+            </span>
           </div>
 
           {/* Payment Method Selector */}
@@ -291,7 +297,10 @@ export default function SalesHistoryPage() {
             />
           </div>
 
-          {(searchQuery || selectedPayment !== "All" || startDate || endDate) && (
+          {(searchQuery ||
+            selectedPayment !== "All" ||
+            startDate ||
+            endDate) && (
             <button
               onClick={() => {
                 setSearchQuery("");
@@ -329,8 +338,12 @@ export default function SalesHistoryPage() {
                 <tr>
                   <td colSpan={8} className="py-12 text-center text-slate-400">
                     <FileText className="w-8 h-8 mx-auto mb-2 text-slate-300" />
-                    <p className="font-semibold text-slate-700">No sales transactions found</p>
-                    <p className="text-[11px] text-slate-400">Try adjusting your filters or date selection</p>
+                    <p className="font-semibold text-slate-700">
+                      No sales transactions found
+                    </p>
+                    <p className="text-[11px] text-slate-400">
+                      Try adjusting your filters or date selection
+                    </p>
                   </td>
                 </tr>
               ) : (
@@ -363,7 +376,9 @@ export default function SalesHistoryPage() {
                         {sale.items.map((i) => i.name).join(", ")}
                       </div>
                     </td>
-                    <td className="py-3 px-4">{getPaymentBadge(sale.paymentMethod)}</td>
+                    <td className="py-3 px-4">
+                      {getPaymentBadge(sale.paymentMethod)}
+                    </td>
                     <td className="py-3 px-4 text-right">
                       <span className="font-mono font-bold text-slate-900 text-sm">
                         {formatCurrency(sale.totalAmount)}
