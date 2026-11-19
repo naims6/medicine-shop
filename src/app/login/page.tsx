@@ -45,11 +45,6 @@ export default function LoginPage() {
     }
   };
 
-  const handleFillDemo = (demoEmail: string, demoPass: string) => {
-    setEmail(demoEmail);
-    setPassword(demoPass);
-    setErrorMsg("");
-  };
 
   if (isLoading || isAuthenticated) {
     return (
@@ -68,7 +63,7 @@ export default function LoginPage() {
             <Store className="w-5 h-5" />
           </div>
           <span className="font-bold text-lg tracking-tight text-slate-900">
-            PharmaCare
+            Shodesh Pharmecy
           </span>
         </div>
 
@@ -137,34 +132,6 @@ export default function LoginPage() {
               {isSubmitting ? "Logging in..." : "Login"}
             </button>
           </form>
-
-          {/* Clean Demo Accounts */}
-          <div className="pt-3 border-t border-slate-100 space-y-2">
-            <div className="flex items-center justify-between text-[11px] text-slate-500 font-medium">
-              <span>Demo accounts:</span>
-              <span className="font-mono text-slate-400">password123</span>
-            </div>
-
-            <div className="grid grid-cols-2 gap-2">
-              <button
-                type="button"
-                onClick={() => handleFillDemo("cashier@gmail.com", "password123")}
-                className="px-2.5 py-1.5 text-xs text-left rounded-md border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700 transition-colors cursor-pointer"
-              >
-                <div className="font-medium text-slate-900">Cashier</div>
-                <div className="text-[10px] text-slate-500 font-mono truncate">cashier@gmail.com</div>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => handleFillDemo("admin@gmail.com", "password123")}
-                className="px-2.5 py-1.5 text-xs text-left rounded-md border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700 transition-colors cursor-pointer"
-              >
-                <div className="font-medium text-slate-900">Admin</div>
-                <div className="text-[10px] text-slate-500 font-mono truncate">admin@gmail.com</div>
-              </button>
-            </div>
-          </div>
         </div>
       </div>
     </div>

@@ -54,7 +54,7 @@ export default function DashboardPage() {
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-white p-4 rounded-xl border border-slate-200 shadow-xs">
         <div>
           <h2 className="text-base font-bold text-slate-900">
-            Pharmacy Sales Overview
+            Shodesh Pharmacy Sales Overview
           </h2>
           <p className="text-xs text-slate-500">
             Showing performance metrics for:{" "}
