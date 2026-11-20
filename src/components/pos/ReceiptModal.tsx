@@ -149,16 +149,29 @@ export function ReceiptModal({
             </div>
           </div>
 
-          {/* Payment & Change breakdown */}
+          {/* Payment & Change / Due breakdown */}
           <div className="py-2 space-y-1 text-[11px] border-b border-dashed border-slate-300">
             <div className="flex justify-between">
-              <span className="text-slate-500">Paid Amount:</span>
-              <span className="font-semibold">৳{sale.amountReceived.toFixed(2)}</span>
+              <span className="text-slate-500">Payment Mode:</span>
+              <span className="font-semibold">{sale.paymentMethod === "Owing" ? "Owing (বাকি)" : "Cash"}</span>
             </div>
-            <div className="flex justify-between">
-              <span className="text-slate-500">Change Returned:</span>
-              <span className="font-semibold text-slate-900">৳{sale.changeAmount.toFixed(2)}</span>
-            </div>
+            {sale.paymentMethod === "Owing" ? (
+              <div className="flex justify-between text-amber-800 font-semibold">
+                <span>Due (বাকি):</span>
+                <span>৳{(sale.totalAmount - (sale.amountReceived || 0)).toFixed(2)}</span>
+              </div>
+            ) : (
+              <>
+                <div className="flex justify-between">
+                  <span className="text-slate-500">Paid Amount:</span>
+                  <span className="font-semibold">৳{sale.amountReceived.toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-500">Change Returned:</span>
+                  <span className="font-semibold text-slate-900">৳{sale.changeAmount.toFixed(2)}</span>
+                </div>
+              </>
+            )}
           </div>
 
           {/* Footer note */}

@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { medicineRepository } from "@/repositories/medicineRepository";
 import { salesRepository } from "@/repositories/salesRepository";
+import { returnRepository } from "@/repositories/returnRepository";
 import { useAuth } from "@/stores/AuthContext";
 
 export default function SettingsPage() {
@@ -38,6 +39,7 @@ export default function SettingsPage() {
       setIsResetting(true);
       await medicineRepository.resetToDefault();
       await salesRepository.resetToDefault();
+      await returnRepository.resetToDefault();
       localStorage.removeItem("pharmacare_pos_cart_v1");
       setTimeout(() => {
         setIsResetting(false);

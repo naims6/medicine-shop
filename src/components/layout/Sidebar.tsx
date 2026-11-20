@@ -7,6 +7,7 @@ import {
   ShoppingCart,
   Pill,
   History,
+  RotateCcw,
   Settings,
   Store,
   ChevronRight,
@@ -36,6 +37,12 @@ const navItems = [
     name: "Sales History",
     href: "/dashboard/sales",
     icon: History,
+    badge: null,
+  },
+  {
+    name: "Returns",
+    href: "/dashboard/returns",
+    icon: RotateCcw,
     badge: null,
   },
   {

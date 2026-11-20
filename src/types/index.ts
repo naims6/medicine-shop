@@ -10,7 +10,7 @@ export type DosageForm =
   | "Chewable Tablet"
   | "Suppository";
 
-export type PaymentMethod = "Cash" | "bKash" | "Nagad" | "Card" | "Other";
+export type PaymentMethod = "Cash" | "Owing";
 
 export interface MedicineBatch {
   id: string;
@@ -125,6 +125,35 @@ export interface DashboardMetrics {
   totalRevenue?: number;
   averageTransactionValue?: number;
   totalMedicinesSold?: number;
+}
+
+export interface ReturnItemSnapshot {
+  medicineId: string;
+  name: string;
+  genericName: string;
+  strength: string;
+  dosageForm: DosageForm;
+  unitPrice: number;
+  unit: string;
+  quantity: number;
+  subtotal: number;
+  batchNumber?: string;
+  expiryDate?: string;
+  reason: string;
+}
+
+export interface Return {
+  id: string;
+  returnNumber: string;
+  createdAt: string;
+  processedBy: string;
+  originalSaleId: string;
+  originalInvoiceNumber: string;
+  items: ReturnItemSnapshot[];
+  totalItems: number;
+  totalRefundAmount: number;
+  refundMethod: PaymentMethod;
+  notes?: string;
 }
 
 export type UserRole = "cashier" | "admin";

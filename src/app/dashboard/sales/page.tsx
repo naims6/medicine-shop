@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
-import { Sale, PaymentMethod } from "@/types";
+import { Sale, PaymentMethod, Return } from "@/types";
 import { salesRepository } from "@/repositories/salesRepository";
 import { formatCurrency, formatDateTime } from "@/lib/utils";
 import {
@@ -14,21 +14,19 @@ import {
   Receipt,
   ChevronLeft,
   ChevronRight,
-  CreditCard,
   Banknote,
-  Smartphone,
   CircleDollarSign,
   X,
+  RotateCcw,
 } from "lucide-react";
 import { ReceiptModal } from "@/components/pos/ReceiptModal";
+import { ReturnModal } from "@/components/returns/ReturnModal";
+import { ReturnReceiptModal } from "@/components/returns/ReturnReceiptModal";
 
 const paymentMethods: (PaymentMethod | "All")[] = [
   "All",
   "Cash",
-  "bKash",
-  "Nagad",
-  "Card",
-  "Other",
+  "Owing",
 ];
 
 const ITEMS_PER_PAGE = 8;
@@ -44,6 +42,10 @@ export default function SalesHistoryPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedSale, setSelectedSale] = useState<Sale | null>(null);
   const [isReceiptOpen, setIsReceiptOpen] = useState(false);
+  const [returnTargetSale, setReturnTargetSale] = useState<Sale | null>(null);
+  const [isReturnModalOpen, setIsReturnModalOpen] = useState(false);
+  const [completedReturn, setCompletedReturn] = useState<Return | null>(null);
+  const [isReturnReceiptOpen, setIsReturnReceiptOpen] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
@@ -104,6 +106,16 @@ export default function SalesHistoryPage() {
     setIsReceiptOpen(true);
   };
 
+  const handleOpenReturn = (sale: Sale) => {
+    setReturnTargetSale(sale);
+    setIsReturnModalOpen(true);
+  };
+
+  const handleReturnComplete = (ret: Return) => {
+    setCompletedReturn(ret);
+    setIsReturnReceiptOpen(true);
+  };
+
   const getPaymentBadge = (method: PaymentMethod) => {
     switch (method) {
       case "Cash":
@@ -112,28 +124,16 @@ export default function SalesHistoryPage() {
             <Banknote className="w-3 h-3" /> Cash
           </span>
         );
-      case "bKash":
+      case "Owing":
         return (
-          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-pink-50 text-pink-700 border border-pink-200">
-            <Smartphone className="w-3 h-3" /> bKash
-          </span>
-        );
-      case "Nagad":
-        return (
-          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-orange-50 text-orange-700 border border-orange-200">
-            <Smartphone className="w-3 h-3" /> Nagad
-          </span>
-        );
-      case "Card":
-        return (
-          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-blue-50 text-blue-700 border border-blue-200">
-            <CreditCard className="w-3 h-3" /> Card
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-50 text-amber-700 border border-amber-200">
+            <CircleDollarSign className="w-3 h-3" /> Owing
           </span>
         );
       default:
         return (
           <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-slate-100 text-slate-700 border border-slate-200">
-            <CircleDollarSign className="w-3 h-3" /> {method}
+            <Banknote className="w-3 h-3" /> {method}
           </span>
         );
     }
@@ -399,6 +399,14 @@ export default function SalesHistoryPage() {
                     <td className="py-3 px-4 text-right">
                       <div className="flex items-center justify-end gap-1.5">
                         <button
+                          onClick={() => handleOpenReturn(sale)}
+                          className="flex items-center gap-1 px-2.5 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 rounded-md border border-rose-200 transition-colors text-[11px] font-medium cursor-pointer"
+                          title="Process Return"
+                        >
+                          <RotateCcw className="w-3.5 h-3.5 text-rose-500" />
+                          <span>Return</span>
+                        </button>
+                        <button
                           onClick={() => handleOpenReceipt(sale)}
                           className="flex items-center gap-1 px-2.5 py-1.5 bg-slate-50 hover:bg-slate-100 text-slate-700 rounded-md border border-slate-200 transition-colors text-[11px] font-medium cursor-pointer"
                           title="View & Print Invoice Memo"
@@ -478,6 +486,14 @@ export default function SalesHistoryPage() {
                     <Receipt className="w-3.5 h-3.5" />
                     <span>View Receipt</span>
                   </button>
+                  <button
+                    type="button"
+                    onClick={() => handleOpenReturn(sale)}
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 rounded-lg text-xs font-semibold border border-rose-200"
+                  >
+                    <RotateCcw className="w-3.5 h-3.5" />
+                    <span>Return</span>
+                  </button>
                 </div>
               </div>
             ))
@@ -539,6 +555,24 @@ export default function SalesHistoryPage() {
         isOpen={isReceiptOpen}
         onClose={() => setIsReceiptOpen(false)}
         sale={selectedSale}
+      />
+
+      {/* Return Processing Modal */}
+      <ReturnModal
+        isOpen={isReturnModalOpen}
+        onClose={() => {
+          setIsReturnModalOpen(false);
+          setReturnTargetSale(null);
+        }}
+        onReturnComplete={handleReturnComplete}
+        preloadedSale={returnTargetSale}
+      />
+
+      {/* Return Receipt Modal */}
+      <ReturnReceiptModal
+        isOpen={isReturnReceiptOpen}
+        onClose={() => setIsReturnReceiptOpen(false)}
+        returnData={completedReturn}
       />
     </div>
   );

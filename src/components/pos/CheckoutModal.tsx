@@ -6,8 +6,6 @@ import { PaymentMethod, Sale } from "@/types";
 import { formatCurrency } from "@/lib/utils";
 import {
   Banknote,
-  Smartphone,
-  CreditCard,
   CircleDollarSign,
   AlertCircle,
   Check,
@@ -26,10 +24,7 @@ interface CheckoutModalProps {
 
 const paymentOptions: { id: PaymentMethod; label: string; icon: React.ElementType; color: string }[] = [
   { id: "Cash", label: "Cash", icon: Banknote, color: "text-emerald-600 bg-emerald-50 border-emerald-300" },
-  { id: "bKash", label: "bKash", icon: Smartphone, color: "text-pink-600 bg-pink-50 border-pink-300" },
-  { id: "Nagad", label: "Nagad", icon: Smartphone, color: "text-orange-600 bg-orange-50 border-orange-300" },
-  { id: "Card", label: "Card / POS", icon: CreditCard, color: "text-blue-600 bg-blue-50 border-blue-300" },
-  { id: "Other", label: "Other", icon: CircleDollarSign, color: "text-purple-600 bg-purple-50 border-purple-300" },
+  { id: "Owing", label: "Owing (বাকি)", icon: CircleDollarSign, color: "text-amber-600 bg-amber-50 border-amber-300" },
 ];
 
 function CheckoutModalContent({
@@ -57,10 +52,13 @@ function CheckoutModalContent({
   const [referenceNote, setReferenceNote] = useState<string>("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // When switching payment method (e.g. bKash, Card), default received amount is exact total
+  // When switching payment method, adjust received amount
   const handleSelectPaymentMethod = (method: PaymentMethod) => {
     setPaymentMethod(method);
-    if (method !== "Cash") {
+    if (method === "Owing") {
+      setAmountReceived(0);
+      setReceivedInput("0");
+    } else {
       setAmountReceived(total);
       setReceivedInput(String(total));
     }
@@ -79,8 +77,10 @@ function CheckoutModalContent({
   };
 
   const changeAmount = Math.max(0, Number((amountReceived - total).toFixed(2)));
-  const isShortage = amountReceived < total;
+  const isOwing = paymentMethod === "Owing";
+  const isShortage = !isOwing && amountReceived < total;
   const shortageAmount = Number((total - amountReceived).toFixed(2));
+  const dueAmount = isOwing ? Number((total - amountReceived).toFixed(2)) : 0;
 
   const handleCompleteSale = async () => {
     if (items.length === 0 || isShortage || isSubmitting) return;
@@ -236,8 +236,18 @@ function CheckoutModalContent({
           </div>
         </div>
 
-        {/* Change or Shortage Display */}
-        {isShortage ? (
+        {/* Change, Shortage, or Due Display */}
+        {isOwing ? (
+          <div className="flex items-center justify-between p-3 rounded-lg bg-amber-50/80 border border-amber-200 text-amber-900">
+            <span className="text-xs font-semibold flex items-center gap-1.5">
+              <CircleDollarSign className="w-4 h-4 text-amber-600" />
+              Due Amount (বাকি):
+            </span>
+            <span className="font-mono text-lg font-bold text-amber-700">
+              ৳{dueAmount.toFixed(2)}
+            </span>
+          </div>
+        ) : isShortage ? (
           <div className="flex items-center gap-2 p-2.5 rounded-lg bg-amber-50 border border-amber-200 text-amber-800 text-xs">
             <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" />
             <span>
@@ -260,10 +270,8 @@ function CheckoutModalContent({
       {/* Optional Notes or Transaction Ref */}
       <div>
         <label htmlFor="notes-ref" className="block text-xs font-semibold text-slate-700 mb-1">
-          {paymentMethod === "bKash" || paymentMethod === "Nagad"
-            ? "Transaction ID / Mobile Ref (Optional)"
-            : paymentMethod === "Card"
-            ? "Card Last 4 Digits / Auth Code (Optional)"
+          {paymentMethod === "Owing"
+            ? "Customer Name / Phone (for Owing record)"
             : "Sale Notes / Customer Phone (Optional)"}
         </label>
         <input
@@ -272,8 +280,8 @@ function CheckoutModalContent({
           value={referenceNote}
           onChange={(e) => setReferenceNote(e.target.value)}
           placeholder={
-            paymentMethod === "bKash"
-              ? "e.g. TrxID 9K8L2M3X or 017xxxxxxxx"
+            paymentMethod === "Owing"
+              ? "e.g. Rahim Mia / 017xxxxxxxx"
               : "e.g. Dr. prescription # / Patient name"
           }
           className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500"
