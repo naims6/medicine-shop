@@ -33,7 +33,7 @@ export function Modal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-2.5 sm:p-4">
       {/* Backdrop */}
       <div
         className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs transition-opacity animate-fade-in"
@@ -42,16 +42,16 @@ export function Modal({
 
       {/* Dialog Window */}
       <div
-        className={`relative z-10 w-full ${maxWidth} bg-white rounded-xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[90vh]`}
+        className={`relative z-10 w-full ${maxWidth} bg-white rounded-xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[94vh] sm:max-h-[90vh]`}
         role="dialog"
         aria-modal="true"
       >
         {/* Header */}
-        <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between shrink-0 bg-slate-50/50">
+        <div className="px-4 py-3 sm:px-5 sm:py-4 border-b border-slate-100 flex items-center justify-between shrink-0 bg-slate-50/50">
           <div>
-            <h3 className="text-base font-bold text-slate-900">{title}</h3>
+            <h3 className="text-sm sm:text-base font-bold text-slate-900">{title}</h3>
             {description && (
-              <p className="text-xs text-slate-500 mt-0.5">{description}</p>
+              <p className="text-[11px] sm:text-xs text-slate-500 mt-0.5">{description}</p>
             )}
           </div>
           <button
@@ -64,7 +64,7 @@ export function Modal({
         </div>
 
         {/* Body */}
-        <div className="overflow-y-auto p-5">{children}</div>
+        <div className="overflow-y-auto p-3.5 sm:p-5">{children}</div>
       </div>
     </div>
   );

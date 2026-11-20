@@ -380,7 +380,8 @@ export default function DashboardPage() {
             </Link>
           </div>
 
-          <div className="overflow-x-auto flex-1">
+          {/* Desktop Table View */}
+          <div className="hidden md:block overflow-x-auto flex-1">
             <table className="w-full text-left text-xs border-collapse">
               <thead>
                 <tr className="border-b border-slate-200 bg-slate-50/80 text-slate-500 font-semibold uppercase text-[10px] tracking-wider">
@@ -433,6 +434,38 @@ export default function DashboardPage() {
                 ))}
               </tbody>
             </table>
+          </div>
+
+          {/* Mobile Cards View */}
+          <div className="md:hidden divide-y divide-slate-100">
+            {metrics?.recentTransactions.map((sale) => (
+              <div
+                key={sale.id}
+                onClick={() => setSelectedReceipt(sale)}
+                className="p-3.5 flex items-center justify-between hover:bg-slate-50 transition-colors cursor-pointer"
+              >
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="font-mono font-bold text-slate-900 text-xs">
+                      {sale.invoiceNumber}
+                    </span>
+                    <span className="text-[10px] font-semibold px-1.5 py-0.2 rounded bg-slate-100 text-slate-600">
+                      {sale.paymentMethod}
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-500 mt-0.5">
+                    {formatDateTime(sale.createdAt)} • {sale.totalItems} pcs
+                  </p>
+                </div>
+
+                <div className="text-right flex items-center gap-2">
+                  <span className="font-mono font-bold text-slate-900 text-sm">
+                    {formatCurrency(sale.totalAmount)}
+                  </span>
+                  <Eye className="w-4 h-4 text-slate-400" />
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       </div>

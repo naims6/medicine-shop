@@ -60,7 +60,7 @@ function ProtectedAppContent({ children }: { children: React.ReactNode }) {
         {/* Main Content Area */}
         <div className="flex flex-col flex-1 h-full min-w-0 overflow-hidden">
           <TopNav onToggleMobileSidebar={() => setMobileSidebarOpen((prev) => !prev)} />
-          <main className="flex-1 overflow-y-auto bg-slate-50/70 p-4 md:p-6">
+          <main className="flex-1 overflow-y-auto bg-slate-50/70 p-2 sm:p-4 md:p-6">
             <div className="max-w-7xl mx-auto h-full flex flex-col">
               {isLoading || !isAuthenticated ? (
                 <div className="flex-1 flex flex-col items-center justify-center py-24 gap-2">

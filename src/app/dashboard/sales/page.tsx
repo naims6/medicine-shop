@@ -11,6 +11,7 @@ import {
   Printer,
   Eye,
   FileText,
+  Receipt,
   ChevronLeft,
   ChevronRight,
   CreditCard,
@@ -319,7 +320,8 @@ export default function SalesHistoryPage() {
 
       {/* Sales Invoices Table Card */}
       <div className="bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden flex flex-col">
-        <div className="overflow-x-auto">
+        {/* Desktop Table View */}
+        <div className="hidden md:block overflow-x-auto">
           <table className="w-full text-left text-xs border-collapse">
             <thead>
               <tr className="bg-slate-50/80 border-b border-slate-200 text-slate-500 uppercase tracking-wider font-semibold text-[10px]">
@@ -418,6 +420,68 @@ export default function SalesHistoryPage() {
               )}
             </tbody>
           </table>
+        </div>
+
+        {/* Mobile Cards View */}
+        <div className="md:hidden divide-y divide-slate-100">
+          {paginatedSales.length === 0 ? (
+            <div className="py-12 text-center text-slate-400 p-4">
+              <FileText className="w-8 h-8 mx-auto mb-2 text-slate-300" />
+              <p className="font-semibold text-slate-700 text-sm">
+                No sales transactions found
+              </p>
+              <p className="text-xs text-slate-400 mt-1">
+                Try adjusting your filters or date selection
+              </p>
+            </div>
+          ) : (
+            paginatedSales.map((sale) => (
+              <div key={sale.id} className="p-3.5 space-y-2">
+                <div className="flex items-start justify-between gap-2">
+                  <div>
+                    <span className="font-mono font-bold text-slate-900 text-sm block">
+                      {sale.invoiceNumber}
+                    </span>
+                    <span className="text-[11px] text-slate-500 font-mono">
+                      {formatDateTime(sale.createdAt)}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    {getPaymentBadge(sale.paymentMethod)}
+                  </div>
+                </div>
+
+                <div className="text-xs text-slate-600">
+                  <span className="font-semibold">{sale.totalItems} items: </span>
+                  <span className="text-slate-500">
+                    {sale.items.map((i) => `${i.name} (x${i.quantity})`).join(", ")}
+                  </span>
+                </div>
+
+                <div className="pt-2 border-t border-slate-100 flex items-center justify-between">
+                  <div>
+                    <span className="text-base font-mono font-bold text-slate-900">
+                      {formatCurrency(sale.totalAmount)}
+                    </span>
+                    {sale.discountAmount > 0 && (
+                      <span className="text-[10px] text-emerald-600 block">
+                        Saved {formatCurrency(sale.discountAmount)}
+                      </span>
+                    )}
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => handleOpenReceipt(sale)}
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-white rounded-lg text-xs font-semibold shadow-xs"
+                  >
+                    <Receipt className="w-3.5 h-3.5" />
+                    <span>View Receipt</span>
+                  </button>
+                </div>
+              </div>
+            ))
+          )}
         </div>
 
         {/* Pagination Footer */}

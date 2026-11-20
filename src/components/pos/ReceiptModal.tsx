@@ -175,27 +175,29 @@ export function ReceiptModal({
         </div>
 
         {/* Action Buttons */}
-        <div className="flex items-center gap-2 pt-2">
-          <button
-            onClick={handlePrint}
-            className="flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg bg-slate-900 hover:bg-slate-800 text-white font-medium text-xs shadow-sm transition-colors cursor-pointer"
-          >
-            <Printer className="w-4 h-4" />
-            <span>Print Receipt</span>
-          </button>
-
-          {onNewSale ? (
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 pt-2">
+          {onNewSale && (
             <button
               onClick={() => {
                 onClose();
                 onNewSale();
               }}
-              className="flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-xs shadow-sm shadow-emerald-200 transition-colors cursor-pointer"
+              className="flex-1 flex items-center justify-center gap-2 py-3 sm:py-2.5 px-4 rounded-lg bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white font-bold text-xs shadow-sm shadow-emerald-200 transition-colors cursor-pointer order-1 sm:order-2"
             >
-              <span>Next Sale</span>
+              <span>Start Next Sale</span>
               <ArrowRight className="w-4 h-4" />
             </button>
-          ) : (
+          )}
+
+          <button
+            onClick={handlePrint}
+            className="flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg bg-slate-900 hover:bg-slate-800 text-white font-medium text-xs shadow-sm transition-colors cursor-pointer order-2 sm:order-1"
+          >
+            <Printer className="w-4 h-4" />
+            <span>Print Receipt</span>
+          </button>
+
+          {!onNewSale && (
             <button
               onClick={onClose}
               className="py-2.5 px-4 rounded-lg border border-slate-200 text-slate-700 hover:bg-slate-50 font-medium text-xs transition-colors cursor-pointer"

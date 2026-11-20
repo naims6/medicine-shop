@@ -161,7 +161,7 @@ function CheckoutModalContent({
         <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-2">
           Select Payment Method
         </label>
-        <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+        <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
           {paymentOptions.map((opt) => {
             const Icon = opt.icon;
             const isSelected = paymentMethod === opt.id;
@@ -170,14 +170,14 @@ function CheckoutModalContent({
                 key={opt.id}
                 type="button"
                 onClick={() => handleSelectPaymentMethod(opt.id)}
-                className={`flex flex-col items-center justify-center p-3 rounded-lg border text-center transition-all cursor-pointer ${
+                className={`flex flex-col items-center justify-center p-2.5 sm:p-3 rounded-lg border text-center transition-all cursor-pointer ${
                   isSelected
                     ? "border-emerald-600 bg-emerald-50/80 text-emerald-800 ring-2 ring-emerald-500/20 font-semibold"
                     : "border-slate-200 bg-white hover:bg-slate-50 text-slate-700"
                 }`}
               >
-                <Icon className={`w-5 h-5 mb-1.5 ${isSelected ? "text-emerald-600" : "text-slate-500"}`} />
-                <span className="text-xs">{opt.label}</span>
+                <Icon className={`w-4 h-4 sm:w-5 sm:h-5 mb-1 sm:mb-1.5 ${isSelected ? "text-emerald-600" : "text-slate-500"}`} />
+                <span className="text-[11px] sm:text-xs">{opt.label}</span>
               </button>
             );
           })}
@@ -185,18 +185,18 @@ function CheckoutModalContent({
       </div>
 
       {/* Amount Received & Quick Presets (Only for Cash or editable) */}
-      <div className="space-y-3 bg-slate-50 p-4 rounded-xl border border-slate-200">
+      <div className="space-y-3 bg-slate-50 p-3.5 sm:p-4 rounded-xl border border-slate-200">
         <div>
-          <div className="flex items-center justify-between mb-1.5">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 mb-1.5">
             <label htmlFor="received-amount" className="text-xs font-semibold text-slate-700">
               Amount Received (৳)
             </label>
             {paymentMethod === "Cash" && (
-              <div className="flex gap-1.5">
+              <div className="flex gap-1.5 overflow-x-auto pb-1 max-w-full">
                 <button
                   type="button"
                   onClick={() => setPresetReceived(total)}
-                  className="text-[11px] font-medium px-2 py-0.5 rounded bg-white border border-slate-200 hover:bg-slate-100 text-slate-700"
+                  className="text-[11px] font-medium px-2 py-0.5 rounded bg-white border border-slate-200 hover:bg-slate-100 text-slate-700 shrink-0"
                 >
                   Exact
                 </button>
@@ -207,7 +207,7 @@ function CheckoutModalContent({
                         key={preset}
                         type="button"
                         onClick={() => setPresetReceived(preset)}
-                        className="text-[11px] font-medium px-2 py-0.5 rounded bg-white border border-slate-200 hover:bg-slate-100 text-slate-700"
+                        className="text-[11px] font-medium px-2 py-0.5 rounded bg-white border border-slate-200 hover:bg-slate-100 text-slate-700 shrink-0"
                       >
                         ৳{preset}
                       </button>
@@ -281,11 +281,11 @@ function CheckoutModalContent({
       </div>
 
       {/* Action Buttons */}
-      <div className="flex items-center gap-3 pt-2">
+      <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3 pt-2">
         <button
           type="button"
           onClick={onClose}
-          className="flex-1 py-2.5 px-4 rounded-lg border border-slate-300 hover:bg-slate-100 text-slate-700 text-xs font-medium transition-colors cursor-pointer"
+          className="py-2.5 px-4 rounded-lg border border-slate-300 hover:bg-slate-100 text-slate-700 text-xs font-medium transition-colors cursor-pointer text-center"
         >
           Cancel (Esc)
         </button>
@@ -293,10 +293,10 @@ function CheckoutModalContent({
           type="button"
           onClick={handleCompleteSale}
           disabled={isShortage || isSubmitting || items.length === 0}
-          className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg font-bold text-xs text-white transition-all shadow-sm ${
+          className={`flex-1 flex items-center justify-center gap-2 py-3 sm:py-2.5 px-4 rounded-lg font-bold text-xs text-white transition-all shadow-sm ${
             isShortage || items.length === 0 || isSubmitting
               ? "bg-slate-300 cursor-not-allowed text-slate-500"
-              : "bg-emerald-600 hover:bg-emerald-700 shadow-emerald-200 cursor-pointer"
+              : "bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 shadow-emerald-200 cursor-pointer"
           }`}
         >
           <Receipt className="w-4 h-4" />
