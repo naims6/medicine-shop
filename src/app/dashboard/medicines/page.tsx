@@ -61,6 +61,7 @@ export default function MedicinesPage() {
   const [medicines, setMedicines] = useState<Medicine[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All");
+  const [selectedManufacturer, setSelectedManufacturer] = useState("All");
   const [selectedForm, setSelectedForm] = useState<DosageForm | "All">("All");
   const [statusFilter, setStatusFilter] = useState<"All" | "Active" | "Inactive">("All");
   const [stockFilter, setStockFilter] = useState<"all" | "low" | "expiring" | "expired" | "out">("all");
@@ -131,11 +132,17 @@ export default function MedicinesPage() {
     return Array.from(new Set(medicines.map((m) => m.category))).sort();
   }, [medicines]);
 
+  // Unique manufacturers
+  const manufacturers = useMemo(() => {
+    return Array.from(new Set(medicines.map((m) => m.manufacturer).filter(Boolean))).sort();
+  }, [medicines]);
+
   // Filtered medicines
   const filteredMedicines = useMemo(() => {
     const q = searchQuery.toLowerCase().trim();
     return medicines.filter((m) => {
       if (selectedCategory !== "All" && m.category !== selectedCategory) return false;
+      if (selectedManufacturer !== "All" && m.manufacturer !== selectedManufacturer) return false;
       if (selectedForm !== "All" && m.dosageForm !== selectedForm) return false;
       if (statusFilter === "Active" && !m.isActive) return false;
       if (statusFilter === "Inactive" && m.isActive) return false;
@@ -172,7 +179,7 @@ export default function MedicinesPage() {
         (m.batches || []).some((b) => b.batchNumber.toLowerCase().includes(q))
       );
     });
-  }, [medicines, searchQuery, selectedCategory, selectedForm, statusFilter, stockFilter]);
+  }, [medicines, searchQuery, selectedCategory, selectedManufacturer, selectedForm, statusFilter, stockFilter]);
 
   // Pagination calculation
   const totalPages = Math.ceil(filteredMedicines.length / ITEMS_PER_PAGE) || 1;
@@ -477,6 +484,23 @@ export default function MedicinesPage() {
             ))}
           </select>
 
+          {/* Manufacturer Filter */}
+          <select
+            value={selectedManufacturer}
+            onChange={(e) => {
+              setSelectedManufacturer(e.target.value);
+              setCurrentPage(1);
+            }}
+            className="bg-slate-50 border border-slate-200 rounded-md px-2 py-1 text-slate-700 focus:outline-none focus:ring-1 focus:ring-emerald-500 max-w-[200px]"
+          >
+            <option value="All">All Manufacturers</option>
+            {manufacturers.map((m) => (
+              <option key={m} value={m}>
+                {m}
+              </option>
+            ))}
+          </select>
+
           {/* Status Filter */}
           <select
             value={statusFilter}
@@ -491,11 +515,12 @@ export default function MedicinesPage() {
             <option value="Inactive">Inactive Only</option>
           </select>
 
-          {(searchQuery || selectedCategory !== "All" || selectedForm !== "All" || statusFilter !== "All" || stockFilter !== "all") && (
+          {(searchQuery || selectedCategory !== "All" || selectedManufacturer !== "All" || selectedForm !== "All" || statusFilter !== "All" || stockFilter !== "all") && (
             <button
               onClick={() => {
                 setSearchQuery("");
                 setSelectedCategory("All");
+                setSelectedManufacturer("All");
                 setSelectedForm("All");
                 setStatusFilter("All");
                 setStockFilter("all");

@@ -73,6 +73,7 @@ export interface IMedicineRepository {
     options?: {
       category?: string;
       dosageForm?: string;
+      manufacturer?: string;
       stockFilter?: "all" | "low" | "out" | "expiring" | "expired";
       includeInactive?: boolean;
     }
@@ -113,6 +114,7 @@ export const medicineRepository: IMedicineRepository = {
     options?: {
       category?: string;
       dosageForm?: string;
+      manufacturer?: string;
       stockFilter?: "all" | "low" | "out" | "expiring" | "expired";
       includeInactive?: boolean;
     }
@@ -126,6 +128,9 @@ export const medicineRepository: IMedicineRepository = {
         return false;
       }
       if (options?.dosageForm && options.dosageForm !== "All" && m.dosageForm !== options.dosageForm) {
+        return false;
+      }
+      if (options?.manufacturer && options.manufacturer !== "All" && m.manufacturer !== options.manufacturer) {
         return false;
       }
 

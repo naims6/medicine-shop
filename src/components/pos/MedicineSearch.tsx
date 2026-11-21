@@ -40,41 +40,46 @@ export function MedicineSearch({ searchInputRef }: MedicineSearchProps) {
   const [query, setQuery] = useState("");
   const [selectedForm, setSelectedForm] = useState<DosageForm | "All">("All");
   const [selectedCategory, setSelectedCategory] = useState<string>("All");
+  const [selectedManufacturer, setSelectedManufacturer] = useState<string>("All");
   const [stockFilter, setStockFilter] = useState<"all" | "low" | "expiring">("all");
   const [medicines, setMedicines] = useState<Medicine[]>([]);
   const [categories, setCategories] = useState<string[]>([]);
+  const [manufacturers, setManufacturers] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   const { items, addItem, updateQuantity, removeItem } = useCart();
 
-  // Load initial list and distinct categories
+  // Load initial list and distinct categories & manufacturers
   useEffect(() => {
     async function loadData() {
       setIsLoading(true);
       const allMeds = await medicineRepository.getAll(false);
       setMedicines(allMeds);
 
-      // Extract unique categories
+      // Extract unique categories and manufacturers
       const cats = Array.from(new Set(allMeds.map((m) => m.category))).sort();
       setCategories(cats);
+      const mans = Array.from(new Set(allMeds.map((m) => m.manufacturer).filter(Boolean))).sort();
+      setManufacturers(mans);
       setIsLoading(false);
     }
     loadData();
   }, []);
 
-  // Filter medicines when query, dosage form, category, or stock filter changes
+  // Filter medicines when query, dosage form, category, manufacturer, or stock filter changes
   useEffect(() => {
     async function filterMeds() {
       const results = await medicineRepository.search(query, {
         dosageForm: selectedForm,
         category: selectedCategory,
+        manufacturer: selectedManufacturer,
         stockFilter: stockFilter === "all" ? undefined : stockFilter,
         includeInactive: false,
       });
       setMedicines(results);
     }
     filterMeds();
-  }, [query, selectedForm, selectedCategory, stockFilter]);
+  }, [query, selectedForm, selectedCategory, selectedManufacturer, stockFilter]);
 
   // Map medicineId -> quantity in cart for instant feedback
   const inCartMap = new Map<string, number>();
@@ -167,6 +172,22 @@ export function MedicineSearch({ searchInputRef }: MedicineSearchProps) {
               ))}
             </select>
           </div>
+
+          {/* Manufacturer Dropdown */}
+          <div className="flex items-center gap-1.5 shrink-0">
+            <select
+              value={selectedManufacturer}
+              onChange={(e) => setSelectedManufacturer(e.target.value)}
+              className="text-xs bg-slate-50 border border-slate-200 rounded-md px-2 py-1 text-slate-700 focus:outline-none focus:ring-1 focus:ring-emerald-500 max-w-[160px] truncate"
+            >
+              <option value="All">All Manufacturers</option>
+              {manufacturers.map((man) => (
+                <option key={man} value={man}>
+                  {man}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
       </div>
 
@@ -187,12 +208,13 @@ export function MedicineSearch({ searchInputRef }: MedicineSearchProps) {
             <p className="text-xs text-slate-500 max-w-xs mt-1">
               Try searching with a generic name or reset filters.
             </p>
-            {(query || selectedForm !== "All" || selectedCategory !== "All" || stockFilter !== "all") && (
+            {(query || selectedForm !== "All" || selectedCategory !== "All" || selectedManufacturer !== "All" || stockFilter !== "all") && (
               <button
                 onClick={() => {
                   setQuery("");
                   setSelectedForm("All");
                   setSelectedCategory("All");
+                  setSelectedManufacturer("All");
                   setStockFilter("all");
                 }}
                 className="mt-3 px-3 py-1.5 text-xs font-medium text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-md hover:bg-emerald-100"
