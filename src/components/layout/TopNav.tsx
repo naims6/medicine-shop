@@ -39,10 +39,6 @@ const titleMap: Record<string, { title: string; subtitle: string }> = {
     title: "User Management",
     subtitle: "Staff accounts, salesman credentials & admin permissions",
   },
-  "/dashboard/settings": {
-    title: "Settings",
-    subtitle: "Pharmacy store preferences",
-  },
 };
 
 interface TopNavProps {

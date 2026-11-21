@@ -10,7 +10,6 @@ import {
   History,
   RotateCcw,
   Users,
-  Settings,
   Store,
   ChevronRight,
 } from "lucide-react";
@@ -51,12 +50,6 @@ const navItems = [
     name: "User Management",
     href: "/dashboard/users",
     icon: Users,
-    badge: null,
-  },
-  {
-    name: "Settings",
-    href: "/dashboard/settings",
-    icon: Settings,
     badge: null,
   },
 ];
