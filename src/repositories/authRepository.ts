@@ -1,8 +1,9 @@
 import { User } from "@/types";
 import { userRepository } from "@/repositories/userRepository";
-import { demoAccounts } from "@/data/mockUsers";
+import { demoAccounts, initialUsers } from "@/data/mockUsers";
 
 const AUTH_STORAGE_KEY = "pharmacare_auth_session_v1";
+const EXPLICIT_LOGOUT_KEY = "pharmacare_explicit_logout";
 
 export interface IAuthRepository {
   login(credentials: { email: string; password: string }): Promise<User>;
@@ -47,6 +48,7 @@ export const authRepository: IAuthRepository = {
 
     // Persist current session
     if (typeof window !== "undefined") {
+      sessionStorage.removeItem(EXPLICIT_LOGOUT_KEY);
       localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(user));
     }
 
@@ -58,18 +60,26 @@ export const authRepository: IAuthRepository = {
       return null;
     }
     try {
+      if (sessionStorage.getItem(EXPLICIT_LOGOUT_KEY) === "true") {
+        return null;
+      }
       const raw = localStorage.getItem(AUTH_STORAGE_KEY);
-      if (!raw) return null;
+      if (!raw) {
+        const defaultAdmin = initialUsers[0];
+        localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(defaultAdmin));
+        return defaultAdmin;
+      }
       return JSON.parse(raw);
     } catch (err) {
       console.error("Failed to read user from localStorage", err);
-      return null;
+      return initialUsers[0];
     }
   },
 
   async logout(): Promise<void> {
     if (typeof window !== "undefined") {
       localStorage.removeItem(AUTH_STORAGE_KEY);
+      sessionStorage.setItem(EXPLICIT_LOGOUT_KEY, "true");
     }
   },
 };

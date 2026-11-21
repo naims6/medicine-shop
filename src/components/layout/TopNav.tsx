@@ -12,7 +12,22 @@ import {
 import { medicineRepository } from "@/repositories/medicineRepository";
 import { salesRepository } from "@/repositories/salesRepository";
 import { userRepository } from "@/repositories/userRepository";
+import { initialUsers } from "@/data/mockUsers";
 import { useAuth } from "@/stores/AuthContext";
+
+function getInitials(name: string): string {
+  if (!name) return "AD";
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 1) return parts[0].substring(0, 2).toUpperCase();
+  const titles = ["dr.", "mr.", "mrs.", "md.", "ms."];
+  if (titles.includes(parts[0].toLowerCase()) && parts.length > 1) {
+    if (parts.length > 2) {
+      return (parts[1][0] + parts[2][0]).toUpperCase();
+    }
+    return parts[1].substring(0, 2).toUpperCase();
+  }
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+}
 
 const titleMap: Record<string, { title: string; subtitle: string }> = {
   "/dashboard": {
@@ -89,6 +104,8 @@ export function TopNav({ onToggleMobileSidebar }: TopNavProps) {
       await salesRepository.resetToDefault();
       await userRepository.resetToDefault();
       localStorage.removeItem("pharmacare_pos_cart_v1");
+      localStorage.setItem("pharmacare_auth_session_v1", JSON.stringify(initialUsers[0]));
+      sessionStorage.removeItem("pharmacare_explicit_logout");
       setShowResetSuccess(true);
       setTimeout(() => {
         setIsResetting(false);
@@ -103,6 +120,10 @@ export function TopNav({ onToggleMobileSidebar }: TopNavProps) {
       router.replace("/login");
     }
   };
+
+  const currentUser = user || initialUsers[0];
+  const displayName = currentUser?.name || "Dr. Tanvir Ahmed";
+  const displayRole = currentUser?.role || "Admin";
 
   return (
     <header className="h-16 bg-white border-b border-slate-200 px-3 sm:px-4 md:px-6 flex items-center justify-between shrink-0">
@@ -125,35 +146,14 @@ export function TopNav({ onToggleMobileSidebar }: TopNavProps) {
         </div>
       </div>
 
-      <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
+      <div className="flex items-center gap-2 sm:gap-3 shrink-0">
         {/* Live Clock */}
-        <div className="hidden md:flex items-center gap-2 text-xs text-slate-600 bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-200">
-          <Clock className="w-3.5 h-3.5 text-emerald-600" />
+        <div className="hidden lg:flex items-center gap-2 text-xs text-slate-600 bg-slate-50 px-2.5 py-1.5 rounded-lg border border-slate-200">
+          <Clock className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
           <span className="font-medium font-mono">
             {currentDateTime || "Loading..."}
           </span>
         </div>
-
-        {/* User Status / Quick Logout */}
-        {user && (
-          <div className="flex items-center gap-1.5 sm:gap-2 pl-1.5 sm:pl-2 border-l border-slate-200">
-            <div className="hidden sm:flex flex-col text-right">
-              <span className="text-xs font-semibold text-slate-800 leading-tight">
-                {user.name.split(" ")[0]}
-              </span>
-              <span className="text-[10px] text-slate-500 capitalize">
-                {user.role}
-              </span>
-            </div>
-            <button
-              onClick={handleLogout}
-              title="Logout"
-              className="p-1.5 rounded-lg border border-slate-200 hover:bg-rose-50 hover:text-rose-600 hover:border-rose-200 text-slate-500 transition-colors cursor-pointer"
-            >
-              <LogOut className="w-3.5 h-3.5" />
-            </button>
-          </div>
-        )}
 
         {/* Reset Demo Data button */}
         <button
@@ -177,6 +177,36 @@ export function TopNav({ onToggleMobileSidebar }: TopNavProps) {
               <span className="hidden sm:inline">Reset</span>
             </>
           )}
+        </button>
+
+        <div className="h-5 w-px bg-slate-200" />
+
+        {/* Admin / User Profile */}
+        <div className="flex items-center gap-2">
+          <div className="w-8 h-8 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 flex items-center justify-center font-bold text-xs shrink-0 select-none">
+            {getInitials(displayName)}
+          </div>
+          <div className="flex flex-col text-left">
+            <span
+              className="text-xs font-semibold text-slate-800 leading-tight max-w-[85px] sm:max-w-[140px] md:max-w-[170px] truncate"
+              title={displayName}
+            >
+              {displayName}
+            </span>
+            <span className="text-[10px] text-slate-500 font-medium capitalize leading-tight">
+              {displayRole}
+            </span>
+          </div>
+        </div>
+
+        {/* Logout Button */}
+        <button
+          onClick={handleLogout}
+          title="Logout"
+          className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-slate-200 hover:bg-rose-50 hover:text-rose-600 hover:border-rose-200 text-slate-600 text-xs font-medium transition-colors cursor-pointer shrink-0"
+        >
+          <LogOut className="w-3.5 h-3.5" />
+          <span className="hidden sm:inline">Logout</span>
         </button>
       </div>
     </header>
