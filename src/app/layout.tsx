@@ -3,8 +3,8 @@ import "./globals.css";
 import { AppLayout } from "@/components/layout/AppLayout";
 
 export const metadata: Metadata = {
-  title: "Shodesh Pharmacy - Trusted Medicine Shop & POS",
-  description: "Shodesh Pharmacy (স্বদেশ ফার্মেসী) - Certified dispensing, 100% authentic medicines, and modern POS system",
+  title: "Shodesh Pharmacy",
+  description: "Shodesh Pharmacy (স্বদেশ ফার্মেসী)",
 };
 
 export default function RootLayout({
