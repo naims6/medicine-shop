@@ -20,7 +20,6 @@ import {
   RotateCcw,
   HandCoins,
   User,
-  Phone,
 } from "lucide-react";
 import { ReceiptModal } from "@/components/pos/ReceiptModal";
 import { ReturnModal } from "@/components/returns/ReturnModal";

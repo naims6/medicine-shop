@@ -4,7 +4,7 @@ import React, { useRef } from "react";
 import { Modal } from "@/components/ui/Modal";
 import { Return } from "@/types";
 import { formatCurrency, formatDateTime } from "@/lib/utils";
-import { Printer, RotateCcw } from "lucide-react";
+import { Printer } from "lucide-react";
 
 interface ReturnReceiptModalProps {
   isOpen: boolean;

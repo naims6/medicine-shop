@@ -3,11 +3,10 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { Modal } from "@/components/ui/Modal";
 import { Sale, PaymentMethod, Return } from "@/types";
-import { formatCurrency, formatDateTime } from "@/lib/utils";
+import { formatCurrency } from "@/lib/utils";
 import {
   Search,
   X,
-  AlertCircle,
   RotateCcw,
   Banknote,
   CircleDollarSign,
@@ -94,42 +93,43 @@ function ReturnModalContent({
 
   // Load return items when a sale is selected
   useEffect(() => {
+    let isCancelled = false;
     if (selectedSale) {
-      loadReturnItems(selectedSale);
+      void returnRepository
+        .getReturnedQuantitiesForSale(selectedSale.id)
+        .then((returnedMap) => {
+          if (isCancelled) return;
+          const items: ReturnItemState[] = selectedSale.items.map((item) => {
+            const alreadyReturned = returnedMap.get(item.medicineId) || 0;
+            const maxReturnable = Math.max(0, item.quantity - alreadyReturned);
+            return {
+              medicineId: item.medicineId,
+              name: item.name,
+              genericName: item.genericName,
+              strength: item.strength,
+              dosageForm: item.dosageForm,
+              unitPrice: item.unitPrice,
+              unit: item.unit,
+              originalQty: item.quantity,
+              alreadyReturned,
+              maxReturnable,
+              returnQty: 0,
+              reason: returnReasons[0],
+              batchNumber: item.batchNumber,
+              expiryDate: item.expiryDate,
+            };
+          });
+
+          const allFullyReturned = items.every((i) => i.maxReturnable === 0);
+          setFullyReturned(allFullyReturned);
+          setReturnItems(items);
+        });
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedSale?.id]);
 
-  const loadReturnItems = async (sale: Sale) => {
-    const returnedMap = await returnRepository.getReturnedQuantitiesForSale(
-      sale.id
-    );
-
-    const items: ReturnItemState[] = sale.items.map((item) => {
-      const alreadyReturned = returnedMap.get(item.medicineId) || 0;
-      const maxReturnable = Math.max(0, item.quantity - alreadyReturned);
-      return {
-        medicineId: item.medicineId,
-        name: item.name,
-        genericName: item.genericName,
-        strength: item.strength,
-        dosageForm: item.dosageForm,
-        unitPrice: item.unitPrice,
-        unit: item.unit,
-        originalQty: item.quantity,
-        alreadyReturned,
-        maxReturnable,
-        returnQty: 0,
-        reason: returnReasons[0],
-        batchNumber: item.batchNumber,
-        expiryDate: item.expiryDate,
-      };
-    });
-
-    const allFullyReturned = items.every((i) => i.maxReturnable === 0);
-    setFullyReturned(allFullyReturned);
-    setReturnItems(items);
-  };
+    return () => {
+      isCancelled = true;
+    };
+  }, [selectedSale]);
 
   // Smart search — search by medicine name, invoice #, cashier, notes
   const matchingSales = useMemo(() => {

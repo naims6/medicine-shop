@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import Link from "next/link";
 import {
   Store,
   Printer,
@@ -8,10 +9,13 @@ import {
   RotateCcw,
   Save,
   CheckCircle,
+  Users,
+  ArrowRight,
 } from "lucide-react";
 import { medicineRepository } from "@/repositories/medicineRepository";
 import { salesRepository } from "@/repositories/salesRepository";
 import { returnRepository } from "@/repositories/returnRepository";
+import { userRepository } from "@/repositories/userRepository";
 import { useAuth } from "@/stores/AuthContext";
 
 export default function SettingsPage() {
@@ -23,7 +27,7 @@ export default function SettingsPage() {
   const [phone, setPhone] = useState("+880 1711-234567");
   const [regNumber, setRegNumber] = useState("DGDA/DL-2024/98421");
   const [cashierName, setCashierName] = useState(user?.name || "Mohammad Rafiq");
-  const [counterNumber, setCounterNumber] = useState(user?.counter || "Counter 01");
+  const [terminalId, setTerminalId] = useState("Terminal 01");
   const [printerFormat, setPrinterFormat] = useState("80mm");
   const [savedSuccess, setSavedSuccess] = useState(false);
   const [isResetting, setIsResetting] = useState(false);
@@ -35,11 +39,12 @@ export default function SettingsPage() {
   };
 
   const handleResetData = async () => {
-    if (confirm("Reset all medicines and sales history to demo defaults?")) {
+    if (confirm("Reset all medicines, sales history, and 5 fake user accounts to demo defaults?")) {
       setIsResetting(true);
       await medicineRepository.resetToDefault();
       await salesRepository.resetToDefault();
       await returnRepository.resetToDefault();
+      await userRepository.resetToDefault();
       localStorage.removeItem("pharmacare_pos_cart_v1");
       setTimeout(() => {
         setIsResetting(false);
@@ -145,12 +150,12 @@ export default function SettingsPage() {
 
             <div>
               <label className="block font-semibold text-slate-700 mb-1">
-                Terminal / Counter ID
+                Terminal ID
               </label>
               <input
                 type="text"
-                value={counterNumber}
-                onChange={(e) => setCounterNumber(e.target.value)}
+                value={terminalId}
+                onChange={(e) => setTerminalId(e.target.value)}
                 className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500"
               />
             </div>
@@ -220,6 +225,30 @@ export default function SettingsPage() {
           )}
         </div>
       </form>
+
+      {/* Staff & User Management Shortcut */}
+      <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-xs space-y-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center">
+              <Users className="w-5 h-5" />
+            </div>
+            <div>
+              <h4 className="text-sm font-bold text-slate-900">Pharmacy Staff & User Accounts</h4>
+              <p className="text-xs text-slate-500">
+                Manage roles (Admin, Salesman), statuses (Active, Inactive), and credentials.
+              </p>
+            </div>
+          </div>
+          <Link
+            href="/dashboard/users"
+            className="flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold shadow-xs transition-colors"
+          >
+            <span>Open User Management</span>
+            <ArrowRight className="w-3.5 h-3.5" />
+          </Link>
+        </div>
+      </div>
 
       {/* Danger Zone: Demo Reset */}
       <div className="bg-white rounded-xl border border-rose-200 p-5 shadow-xs space-y-3 mt-8">

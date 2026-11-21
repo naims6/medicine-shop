@@ -162,14 +162,18 @@ export interface Return {
   notes?: string;
 }
 
-export type UserRole = "cashier" | "admin";
+export type UserRole = "Salesman" | "Admin" | "cashier" | "admin";
+
+export type UserStatus = "Active" | "Inactive";
 
 export interface User {
   id: string;
   name: string;
   email: string;
   role: UserRole;
-  counter?: string;
-  shift?: string;
+  status: UserStatus;
+  password?: string;
+  phone?: string;
+  createdAt?: string;
 }
 

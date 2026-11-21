@@ -1,4 +1,5 @@
 import { User } from "@/types";
+import { userRepository } from "@/repositories/userRepository";
 import { demoAccounts } from "@/data/mockUsers";
 
 const AUTH_STORAGE_KEY = "pharmacare_auth_session_v1";
@@ -14,24 +15,42 @@ export const authRepository: IAuthRepository = {
     const cleanEmail = email.trim().toLowerCase();
     const cleanPassword = password.trim();
 
-    const account = demoAccounts.find(
-      (acc) => acc.user.email.toLowerCase() === cleanEmail
-    );
+    // Check userRepository first
+    const allUsers = await userRepository.getAllUsers();
+    let user = allUsers.find((u) => u.email.toLowerCase() === cleanEmail);
 
-    if (!account) {
-      throw new Error("Invalid email. Please check your credentials or use a demo account.");
+    // Fallback to demoAccounts if not found in repository
+    if (!user) {
+      const demoMatch = demoAccounts.find((d) => d.user.email.toLowerCase() === cleanEmail);
+      if (demoMatch) {
+        user = demoMatch.user;
+      }
     }
 
-    const isPasswordMatch = account.passwords.includes(cleanPassword);
-    if (!isPasswordMatch) {
-      throw new Error("Invalid password. For demo testing, use 'password123' or '123456'.");
+    if (!user) {
+      throw new Error("Invalid email address. No user account found with this email.");
     }
 
+    // Check account status
+    if (user.status === "Inactive") {
+      throw new Error("This account is inactive.");
+    }
+
+    // Check password
+    const userPass = user.password || "password123";
+    const acceptedDemoPasswords = ["password123", "123456", "admin123", "salesman123", "cashier123"];
+    const isMatch = userPass === cleanPassword || acceptedDemoPasswords.includes(cleanPassword);
+
+    if (!isMatch) {
+      throw new Error("Incorrect password.");
+    }
+
+    // Persist current session
     if (typeof window !== "undefined") {
-      localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(account.user));
+      localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(user));
     }
 
-    return account.user;
+    return user;
   },
 
   getCurrentUser(): User | null {

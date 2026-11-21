@@ -138,6 +138,33 @@ export default function LoginPage() {
               {isSubmitting ? "Logging in..." : "Login"}
             </button>
           </form>
+
+          {/* Demo Accounts */}
+          <div className="pt-3 border-t border-slate-100 text-[11px] text-slate-500 space-y-1.5">
+            <div className="font-semibold text-slate-600">Demo Accounts:</div>
+            <div className="flex flex-wrap gap-1.5">
+              <button
+                type="button"
+                onClick={() => {
+                  setEmail("admin@gmail.com");
+                  setPassword("password123");
+                }}
+                className="px-2 py-1 rounded bg-slate-100 hover:bg-slate-200 text-slate-700 cursor-pointer"
+              >
+                Admin (admin@gmail.com)
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setEmail("cashier@gmail.com");
+                  setPassword("password123");
+                }}
+                className="px-2 py-1 rounded bg-slate-100 hover:bg-slate-200 text-slate-700 cursor-pointer"
+              >
+                Salesman (cashier@gmail.com)
+              </button>
+            </div>
+          </div>
         </div>
       </div>
     </div>

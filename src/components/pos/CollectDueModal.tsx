@@ -3,7 +3,6 @@
 import React, { useState, useEffect } from "react";
 import { Modal } from "@/components/ui/Modal";
 import { Sale } from "@/types";
-import { formatCurrency } from "@/lib/utils";
 import { salesRepository } from "@/repositories/salesRepository";
 import {
   Banknote,
@@ -11,9 +10,7 @@ import {
   AlertCircle,
   User,
   Phone,
-  Receipt,
   ArrowRight,
-  Sparkles,
 } from "lucide-react";
 
 interface CollectDueModalProps {
@@ -69,8 +66,10 @@ function CollectDueContent({
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    setPaymentInput(String(currentDue));
-    setPaymentAmount(currentDue);
+    Promise.resolve().then(() => {
+      setPaymentInput(String(currentDue));
+      setPaymentAmount(currentDue);
+    });
   }, [currentDue]);
 
   const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {

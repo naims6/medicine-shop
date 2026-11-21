@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { medicineRepository } from "@/repositories/medicineRepository";
 import { salesRepository } from "@/repositories/salesRepository";
+import { userRepository } from "@/repositories/userRepository";
 import { useAuth } from "@/stores/AuthContext";
 
 const titleMap: Record<string, { title: string; subtitle: string }> = {
@@ -29,6 +30,14 @@ const titleMap: Record<string, { title: string; subtitle: string }> = {
   "/dashboard/sales": {
     title: "Sales History",
     subtitle: "Invoices, transactions & records",
+  },
+  "/dashboard/returns": {
+    title: "Sales Returns & Refunds",
+    subtitle: "Process medicine returns & inventory restock",
+  },
+  "/dashboard/users": {
+    title: "User Management",
+    subtitle: "Staff accounts, salesman credentials & admin permissions",
   },
   "/dashboard/settings": {
     title: "Settings",
@@ -78,10 +87,11 @@ export function TopNav({ onToggleMobileSidebar }: TopNavProps) {
   };
 
   const handleResetData = async () => {
-    if (confirm("Reset demo data to initial sample medicines & sales?")) {
+    if (confirm("Reset demo data to initial sample medicines, sales & 5 fake users?")) {
       setIsResetting(true);
       await medicineRepository.resetToDefault();
       await salesRepository.resetToDefault();
+      await userRepository.resetToDefault();
       localStorage.removeItem("pharmacare_pos_cart_v1");
       setShowResetSuccess(true);
       setTimeout(() => {

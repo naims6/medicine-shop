@@ -76,8 +76,8 @@ export function ReceiptModal({
               <span>{formatDateTime(sale.createdAt)}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-slate-500">Cashier:</span>
-              <span>{sale.cashierName} (Counter 01)</span>
+              <span className="text-slate-500">Salesman:</span>
+              <span>{sale.cashierName}</span>
             </div>
             {sale.customerName && (
               <div className="flex justify-between bg-amber-50/60 p-1 rounded border border-amber-200">

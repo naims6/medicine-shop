@@ -1,5 +1,6 @@
 "use client";
 
+import React, { useSyncExternalStore } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -8,6 +9,7 @@ import {
   Pill,
   History,
   RotateCcw,
+  Users,
   Settings,
   Store,
   ChevronRight,
@@ -46,6 +48,12 @@ const navItems = [
     badge: null,
   },
   {
+    name: "User Management",
+    href: "/dashboard/users",
+    icon: Users,
+    badge: null,
+  },
+  {
     name: "Settings",
     href: "/dashboard/settings",
     icon: Settings,
@@ -57,9 +65,13 @@ interface SidebarProps {
   onCloseMobile?: () => void;
 }
 
+const emptySubscribe = () => () => {};
+
 export function Sidebar({ onCloseMobile }: SidebarProps) {
   const pathname = usePathname();
   const { totalQuantity } = useCart();
+  const mounted = useSyncExternalStore(emptySubscribe, () => true, () => false);
+  const cartCount = mounted ? totalQuantity : 0;
 
   return (
     <aside className="w-64 bg-white border-r border-slate-200 flex flex-col h-full shrink-0 select-none">
@@ -93,7 +105,7 @@ export function Sidebar({ onCloseMobile }: SidebarProps) {
             <ShoppingCart className="w-4 h-4" />
             <span>Open POS Terminal</span>
           </div>
-          {totalQuantity > 0 && (
+          {cartCount > 0 && (
             <span
               className={`px-2 py-0.5 text-xs font-bold rounded-full ${
                 pathname === "/pos"
@@ -101,7 +113,7 @@ export function Sidebar({ onCloseMobile }: SidebarProps) {
                   : "bg-emerald-600 text-white"
               }`}
             >
-              {totalQuantity}
+              {cartCount}
             </span>
           )}
         </Link>
@@ -135,9 +147,9 @@ export function Sidebar({ onCloseMobile }: SidebarProps) {
                 />
                 <span>{item.name}</span>
               </div>
-              {item.isPOS && totalQuantity > 0 ? (
+              {item.isPOS && cartCount > 0 ? (
                 <span className="w-5 h-5 flex items-center justify-center text-[11px] font-bold bg-emerald-600 text-white rounded-full">
-                  {totalQuantity}
+                  {cartCount}
                 </span>
               ) : isActive ? (
                 <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
