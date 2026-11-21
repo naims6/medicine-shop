@@ -19,6 +19,7 @@ import {
   PackagePlus,
   Clock,
   Layers,
+  CircleDollarSign,
 } from "lucide-react";
 import { SalesChart } from "@/components/dashboard/SalesChart";
 import { ReceiptModal } from "@/components/pos/ReceiptModal";
@@ -67,8 +68,8 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* 6 Summary Stat Cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+      {/* 7 Summary Stat Cards */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7 gap-3">
         {/* Card 1: Today Sale Amount */}
         <div className="bg-white p-3.5 rounded-xl border border-slate-200 shadow-xs flex items-center justify-between">
           <div>
@@ -123,7 +124,29 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* Card 4: Total Bills */}
+        {/* Card 4: Total Owing (বাকি) */}
+        <Link
+          href="/dashboard/sales"
+          className="bg-white p-3.5 rounded-xl border border-slate-200 hover:border-amber-400 shadow-xs flex items-center justify-between transition-colors group cursor-pointer"
+        >
+          <div>
+            <span className="text-[10px] font-bold uppercase tracking-wider text-amber-800 flex items-center gap-1">
+              <CircleDollarSign className="w-3 h-3 text-amber-600" />
+              Total Owing (বাকি)
+            </span>
+            <p className="text-lg font-bold font-mono text-amber-700 mt-0.5">
+              {isLoading ? "..." : formatCurrency(metrics?.totalOwingAmount || 0)}
+            </p>
+            <span className="text-[10px] text-amber-600 font-medium group-hover:underline">
+              {isLoading ? "..." : `${metrics?.owingTransactionsCount || 0} unpaid bills →`}
+            </span>
+          </div>
+          <div className="w-8 h-8 rounded-lg bg-amber-50 text-amber-600 border border-amber-200 flex items-center justify-center shrink-0">
+            <CircleDollarSign className="w-4 h-4" />
+          </div>
+        </Link>
+
+        {/* Card 5: Total Bills */}
         <div className="bg-white p-3.5 rounded-xl border border-slate-200 shadow-xs flex items-center justify-between">
           <div>
             <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
@@ -139,7 +162,7 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* Card 5: Low Stock Alert */}
+        {/* Card 6: Low Stock Alert */}
         <Link
           href="/dashboard/medicines"
           className="bg-white p-3.5 rounded-xl border border-slate-200 hover:border-amber-400 shadow-xs flex items-center justify-between transition-colors group cursor-pointer"
@@ -161,7 +184,7 @@ export default function DashboardPage() {
           </div>
         </Link>
 
-        {/* Card 6: Expiry Alert (<90d) */}
+        {/* Card 7: Expiry Alert (<90d) */}
         <Link
           href="/dashboard/medicines"
           className="bg-white p-3.5 rounded-xl border border-slate-200 hover:border-rose-400 shadow-xs flex items-center justify-between transition-colors group cursor-pointer"

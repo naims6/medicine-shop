@@ -18,10 +18,14 @@ import {
   CircleDollarSign,
   X,
   RotateCcw,
+  HandCoins,
+  User,
+  Phone,
 } from "lucide-react";
 import { ReceiptModal } from "@/components/pos/ReceiptModal";
 import { ReturnModal } from "@/components/returns/ReturnModal";
 import { ReturnReceiptModal } from "@/components/returns/ReturnReceiptModal";
+import { CollectDueModal } from "@/components/pos/CollectDueModal";
 
 const paymentMethods: (PaymentMethod | "All")[] = [
   "All",
@@ -46,6 +50,8 @@ export default function SalesHistoryPage() {
   const [isReturnModalOpen, setIsReturnModalOpen] = useState(false);
   const [completedReturn, setCompletedReturn] = useState<Return | null>(null);
   const [isReturnReceiptOpen, setIsReturnReceiptOpen] = useState(false);
+  const [collectDueTargetSale, setCollectDueTargetSale] = useState<Sale | null>(null);
+  const [isCollectDueOpen, setIsCollectDueOpen] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
@@ -82,6 +88,8 @@ export default function SalesHistoryPage() {
       return (
         s.invoiceNumber.toLowerCase().includes(q) ||
         s.cashierName.toLowerCase().includes(q) ||
+        (s.customerName && s.customerName.toLowerCase().includes(q)) ||
+        (s.customerPhone && s.customerPhone.toLowerCase().includes(q)) ||
         s.items.some(
           (item) =>
             item.name.toLowerCase().includes(q) ||
@@ -101,9 +109,35 @@ export default function SalesHistoryPage() {
     return filteredSales.reduce((acc, s) => acc + s.totalAmount, 0);
   }, [filteredSales]);
 
+  const totalFilteredOwing = useMemo(() => {
+    return filteredSales.reduce((acc, s) => {
+      const due =
+        typeof s.dueAmount === "number"
+          ? s.dueAmount
+          : s.paymentMethod === "Owing"
+          ? Math.max(0, s.totalAmount - (s.amountReceived || 0))
+          : 0;
+      return acc + due;
+    }, 0);
+  }, [filteredSales]);
+
   const handleOpenReceipt = (sale: Sale) => {
     setSelectedSale(sale);
     setIsReceiptOpen(true);
+  };
+
+  const handleOpenCollectDue = (sale: Sale) => {
+    setCollectDueTargetSale(sale);
+    setIsCollectDueOpen(true);
+  };
+
+  const handleDueCollected = (updatedSale: Sale) => {
+    setSales((prev) =>
+      prev.map((s) => (s.id === updatedSale.id ? updatedSale : s))
+    );
+    if (selectedSale?.id === updatedSale.id) {
+      setSelectedSale(updatedSale);
+    }
   };
 
   const handleOpenReturn = (sale: Sale) => {
@@ -142,7 +176,7 @@ export default function SalesHistoryPage() {
   return (
     <div className="space-y-4">
       {/* Metrics Banner */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <div className="bg-white p-3.5 rounded-xl border border-slate-200 shadow-xs">
           <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
             Filtered Invoices
@@ -162,7 +196,28 @@ export default function SalesHistoryPage() {
           <p className="text-xl font-bold font-mono text-emerald-700 mt-0.5">
             {formatCurrency(totalFilteredRevenue)}
           </p>
-          <span className="text-[11px] text-slate-400">Net collection</span>
+          <span className="text-[11px] text-slate-400">Net billed total</span>
+        </div>
+
+        <div className={`p-3.5 rounded-xl border shadow-xs transition-all ${
+          totalFilteredOwing > 0 ? "bg-amber-50/50 border-amber-300" : "bg-white border-slate-200"
+        }`}>
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] font-bold text-amber-800 uppercase tracking-wider">
+              Total Owing (বাকি)
+            </span>
+            {totalFilteredOwing > 0 && (
+              <span className="text-[10px] font-bold px-1.5 py-0.2 rounded-full bg-amber-100 text-amber-800">
+                Uncollected
+              </span>
+            )}
+          </div>
+          <p className="text-xl font-bold font-mono text-amber-700 mt-0.5">
+            {formatCurrency(totalFilteredOwing)}
+          </p>
+          <span className="text-[11px] text-amber-600 font-medium">
+            Pending customer debt
+          </span>
         </div>
 
         <div className="bg-white p-3.5 rounded-xl border border-slate-200 shadow-xs">
@@ -193,7 +248,7 @@ export default function SalesHistoryPage() {
                 setSearchQuery(e.target.value);
                 setCurrentPage(1);
               }}
-              placeholder="Search invoice number, cashier, or medicine..."
+              placeholder="Search invoice, customer name, phone, cashier, or medicine..."
               className="w-full pl-9 pr-8 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:bg-white"
             />
             {searchQuery && (
@@ -349,82 +404,131 @@ export default function SalesHistoryPage() {
                   </td>
                 </tr>
               ) : (
-                paginatedSales.map((sale) => (
-                  <tr
-                    key={sale.id}
-                    className="hover:bg-slate-50/80 transition-colors"
-                  >
-                    <td className="py-3 px-4">
-                      <span className="font-mono font-bold text-slate-900 block">
-                        {sale.invoiceNumber}
-                      </span>
-                      {sale.notes && (
-                        <span className="text-[10px] text-slate-400 truncate max-w-[150px] block">
-                          Ref: {sale.notes}
+                paginatedSales.map((sale) => {
+                  const due =
+                    typeof sale.dueAmount === "number"
+                      ? sale.dueAmount
+                      : sale.paymentMethod === "Owing"
+                      ? Math.max(0, sale.totalAmount - (sale.amountReceived || 0))
+                      : 0;
+                  const hasDue = due > 0;
+
+                  return (
+                    <tr
+                      key={sale.id}
+                      className="hover:bg-slate-50/80 transition-colors"
+                    >
+                      <td className="py-3 px-4">
+                        <span className="font-mono font-bold text-slate-900 block">
+                          {sale.invoiceNumber}
                         </span>
-                      )}
-                    </td>
-                    <td className="py-3 px-4 text-slate-600 font-mono text-[11px]">
-                      {formatDateTime(sale.createdAt)}
-                    </td>
-                    <td className="py-3 px-4 text-slate-700 font-medium">
-                      {sale.cashierName}
-                    </td>
-                    <td className="py-3 px-4">
-                      <div className="text-slate-900 font-medium">
-                        {sale.totalItems} pcs ({sale.items.length} medicines)
-                      </div>
-                      <div className="text-[10px] text-slate-400 truncate max-w-[200px]">
-                        {sale.items.map((i) => i.name).join(", ")}
-                      </div>
-                    </td>
-                    <td className="py-3 px-4">
-                      {getPaymentBadge(sale.paymentMethod)}
-                    </td>
-                    <td className="py-3 px-4 text-right">
-                      <span className="font-mono font-bold text-slate-900 text-sm">
-                        {formatCurrency(sale.totalAmount)}
-                      </span>
-                      {sale.discountAmount > 0 && (
-                        <span className="text-[10px] text-emerald-600 block -mt-0.5">
-                          Saved {formatCurrency(sale.discountAmount)}
+                        {sale.customerName && (
+                          <div className="flex items-center gap-1 text-[11px] font-semibold text-slate-800 mt-0.5">
+                            <User className="w-3 h-3 text-amber-600 shrink-0" />
+                            <span>{sale.customerName}</span>
+                            {sale.customerPhone && (
+                              <span className="text-slate-500 font-normal">
+                                ({sale.customerPhone})
+                              </span>
+                            )}
+                          </div>
+                        )}
+                        {sale.notes && (
+                          <span className="text-[10px] text-slate-400 truncate max-w-[150px] block">
+                            Ref: {sale.notes}
+                          </span>
+                        )}
+                      </td>
+                      <td className="py-3 px-4 text-slate-600 font-mono text-[11px]">
+                        {formatDateTime(sale.createdAt)}
+                      </td>
+                      <td className="py-3 px-4 text-slate-700 font-medium">
+                        {sale.cashierName}
+                      </td>
+                      <td className="py-3 px-4">
+                        <div className="text-slate-900 font-medium">
+                          {sale.totalItems} pcs ({sale.items.length} medicines)
+                        </div>
+                        <div className="text-[10px] text-slate-400 truncate max-w-[200px]">
+                          {sale.items.map((i) => i.name).join(", ")}
+                        </div>
+                      </td>
+                      <td className="py-3 px-4">
+                        {getPaymentBadge(sale.paymentMethod)}
+                      </td>
+                      <td className="py-3 px-4 text-right">
+                        <span className="font-mono font-bold text-slate-900 text-sm">
+                          {formatCurrency(sale.totalAmount)}
                         </span>
-                      )}
-                    </td>
-                    <td className="py-3 px-4 text-center">
-                      <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                        Completed
-                      </span>
-                    </td>
-                    <td className="py-3 px-4 text-right">
-                      <div className="flex items-center justify-end gap-1.5">
-                        <button
-                          onClick={() => handleOpenReturn(sale)}
-                          className="flex items-center gap-1 px-2.5 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 rounded-md border border-rose-200 transition-colors text-[11px] font-medium cursor-pointer"
-                          title="Process Return"
-                        >
-                          <RotateCcw className="w-3.5 h-3.5 text-rose-500" />
-                          <span>Return</span>
-                        </button>
-                        <button
-                          onClick={() => handleOpenReceipt(sale)}
-                          className="flex items-center gap-1 px-2.5 py-1.5 bg-slate-50 hover:bg-slate-100 text-slate-700 rounded-md border border-slate-200 transition-colors text-[11px] font-medium cursor-pointer"
-                          title="View & Print Invoice Memo"
-                        >
-                          <Eye className="w-3.5 h-3.5 text-slate-500" />
-                          <span>View</span>
-                        </button>
-                        <button
-                          onClick={() => handleOpenReceipt(sale)}
-                          className="p-1.5 bg-slate-50 hover:bg-emerald-50 hover:text-emerald-700 text-slate-500 rounded-md border border-slate-200 transition-colors cursor-pointer"
-                          title="Reprint Receipt"
-                        >
-                          <Printer className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))
+                        {hasDue ? (
+                          <div className="text-[10px] text-amber-700 font-extrabold mt-0.5">
+                            Due: ৳{due.toFixed(2)}
+                            <span className="block text-[9px] text-slate-400 font-normal">
+                              Paid: ৳{(sale.amountReceived || 0).toFixed(2)}
+                            </span>
+                          </div>
+                        ) : sale.dueStatus === "cleared" && sale.customerName ? (
+                          <div className="text-[9px] text-emerald-600 font-medium mt-0.5">
+                            ✓ Fully settled
+                          </div>
+                        ) : null}
+                        {sale.discountAmount > 0 && (
+                          <span className="text-[10px] text-emerald-600 block -mt-0.5">
+                            Saved {formatCurrency(sale.discountAmount)}
+                          </span>
+                        )}
+                      </td>
+                      <td className="py-3 px-4 text-center">
+                        {hasDue ? (
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-800 border border-amber-300">
+                            Owing
+                          </span>
+                        ) : (
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                            Completed
+                          </span>
+                        )}
+                      </td>
+                      <td className="py-3 px-4 text-right">
+                        <div className="flex items-center justify-end gap-1.5">
+                          {hasDue && (
+                            <button
+                              onClick={() => handleOpenCollectDue(sale)}
+                              className="flex items-center gap-1 px-2.5 py-1.5 bg-amber-500 hover:bg-amber-600 text-white rounded-md transition-colors text-[11px] font-bold shadow-xs shadow-amber-200 cursor-pointer"
+                              title="Collect Due Payment (বাকি আদায়)"
+                            >
+                              <HandCoins className="w-3.5 h-3.5" />
+                              <span>Collect Due</span>
+                            </button>
+                          )}
+                          <button
+                            onClick={() => handleOpenReturn(sale)}
+                            className="flex items-center gap-1 px-2.5 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 rounded-md border border-rose-200 transition-colors text-[11px] font-medium cursor-pointer"
+                            title="Process Return"
+                          >
+                            <RotateCcw className="w-3.5 h-3.5 text-rose-500" />
+                            <span>Return</span>
+                          </button>
+                          <button
+                            onClick={() => handleOpenReceipt(sale)}
+                            className="flex items-center gap-1 px-2.5 py-1.5 bg-slate-50 hover:bg-slate-100 text-slate-700 rounded-md border border-slate-200 transition-colors text-[11px] font-medium cursor-pointer"
+                            title="View & Print Invoice Memo"
+                          >
+                            <Eye className="w-3.5 h-3.5 text-slate-500" />
+                            <span>View</span>
+                          </button>
+                          <button
+                            onClick={() => handleOpenReceipt(sale)}
+                            className="p-1.5 bg-slate-50 hover:bg-emerald-50 hover:text-emerald-700 text-slate-500 rounded-md border border-slate-200 transition-colors cursor-pointer"
+                            title="Reprint Receipt"
+                          >
+                            <Printer className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })
               )}
             </tbody>
           </table>
@@ -443,60 +547,97 @@ export default function SalesHistoryPage() {
               </p>
             </div>
           ) : (
-            paginatedSales.map((sale) => (
-              <div key={sale.id} className="p-3.5 space-y-2">
-                <div className="flex items-start justify-between gap-2">
-                  <div>
-                    <span className="font-mono font-bold text-slate-900 text-sm block">
-                      {sale.invoiceNumber}
-                    </span>
-                    <span className="text-[11px] text-slate-500 font-mono">
-                      {formatDateTime(sale.createdAt)}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    {getPaymentBadge(sale.paymentMethod)}
-                  </div>
-                </div>
+            paginatedSales.map((sale) => {
+              const due =
+                typeof sale.dueAmount === "number"
+                  ? sale.dueAmount
+                  : sale.paymentMethod === "Owing"
+                  ? Math.max(0, sale.totalAmount - (sale.amountReceived || 0))
+                  : 0;
+              const hasDue = due > 0;
 
-                <div className="text-xs text-slate-600">
-                  <span className="font-semibold">{sale.totalItems} items: </span>
-                  <span className="text-slate-500">
-                    {sale.items.map((i) => `${i.name} (x${i.quantity})`).join(", ")}
-                  </span>
-                </div>
-
-                <div className="pt-2 border-t border-slate-100 flex items-center justify-between">
-                  <div>
-                    <span className="text-base font-mono font-bold text-slate-900">
-                      {formatCurrency(sale.totalAmount)}
-                    </span>
-                    {sale.discountAmount > 0 && (
-                      <span className="text-[10px] text-emerald-600 block">
-                        Saved {formatCurrency(sale.discountAmount)}
+              return (
+                <div key={sale.id} className="p-3.5 space-y-2">
+                  <div className="flex items-start justify-between gap-2">
+                    <div>
+                      <span className="font-mono font-bold text-slate-900 text-sm block">
+                        {sale.invoiceNumber}
                       </span>
-                    )}
+                      {sale.customerName && (
+                        <div className="flex items-center gap-1 text-xs font-bold text-amber-800 mt-0.5">
+                          <User className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                          <span>{sale.customerName}</span>
+                          {sale.customerPhone && (
+                            <span className="text-slate-500 font-normal text-[11px]">
+                              ({sale.customerPhone})
+                            </span>
+                          )}
+                        </div>
+                      )}
+                      <span className="text-[11px] text-slate-500 font-mono">
+                        {formatDateTime(sale.createdAt)}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      {getPaymentBadge(sale.paymentMethod)}
+                    </div>
                   </div>
 
-                  <button
-                    type="button"
-                    onClick={() => handleOpenReceipt(sale)}
-                    className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-white rounded-lg text-xs font-semibold shadow-xs"
-                  >
-                    <Receipt className="w-3.5 h-3.5" />
-                    <span>View Receipt</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleOpenReturn(sale)}
-                    className="flex items-center gap-1.5 px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 rounded-lg text-xs font-semibold border border-rose-200"
-                  >
-                    <RotateCcw className="w-3.5 h-3.5" />
-                    <span>Return</span>
-                  </button>
+                  <div className="text-xs text-slate-600">
+                    <span className="font-semibold">{sale.totalItems} items: </span>
+                    <span className="text-slate-500">
+                      {sale.items.map((i) => `${i.name} (x${i.quantity})`).join(", ")}
+                    </span>
+                  </div>
+
+                  <div className="pt-2 border-t border-slate-100 flex items-center justify-between">
+                    <div>
+                      <span className="text-base font-mono font-bold text-slate-900">
+                        {formatCurrency(sale.totalAmount)}
+                      </span>
+                      {hasDue ? (
+                        <div className="text-xs text-amber-800 font-extrabold">
+                          Due: ৳{due.toFixed(2)}
+                        </div>
+                      ) : sale.dueStatus === "cleared" && sale.customerName ? (
+                        <div className="text-[10px] text-emerald-600 font-medium">
+                          ✓ All dues cleared
+                        </div>
+                      ) : null}
+                    </div>
+
+                    <div className="flex items-center gap-1.5">
+                      {hasDue && (
+                        <button
+                          type="button"
+                          onClick={() => handleOpenCollectDue(sale)}
+                          className="flex items-center gap-1 px-2.5 py-1.5 bg-amber-500 hover:bg-amber-600 text-white rounded-lg text-xs font-bold shadow-xs cursor-pointer"
+                        >
+                          <HandCoins className="w-3.5 h-3.5" />
+                          <span>Collect</span>
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => handleOpenReceipt(sale)}
+                        className="flex items-center gap-1 px-2.5 py-1.5 bg-slate-900 hover:bg-slate-800 text-white rounded-lg text-xs font-semibold shadow-xs cursor-pointer"
+                      >
+                        <Receipt className="w-3.5 h-3.5" />
+                        <span>View</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleOpenReturn(sale)}
+                        className="flex items-center gap-1 px-2.5 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 rounded-lg text-xs font-semibold border border-rose-200 cursor-pointer"
+                      >
+                        <RotateCcw className="w-3.5 h-3.5" />
+                        <span>Return</span>
+                      </button>
+                    </div>
+                  </div>
                 </div>
-              </div>
-            ))
+              );
+            })
           )}
         </div>
 
@@ -573,6 +714,17 @@ export default function SalesHistoryPage() {
         isOpen={isReturnReceiptOpen}
         onClose={() => setIsReturnReceiptOpen(false)}
         returnData={completedReturn}
+      />
+
+      {/* Collect Due Payment Modal */}
+      <CollectDueModal
+        isOpen={isCollectDueOpen}
+        onClose={() => {
+          setIsCollectDueOpen(false);
+          setCollectDueTargetSale(null);
+        }}
+        sale={collectDueTargetSale}
+        onDueCollected={handleDueCollected}
       />
     </div>
   );

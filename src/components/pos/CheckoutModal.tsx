@@ -10,6 +10,8 @@ import {
   AlertCircle,
   Check,
   Receipt,
+  User,
+  Phone,
 } from "lucide-react";
 import { salesRepository } from "@/repositories/salesRepository";
 import { medicineRepository } from "@/repositories/medicineRepository";
@@ -49,6 +51,8 @@ function CheckoutModalContent({
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("Cash");
   const [amountReceived, setAmountReceived] = useState<number>(total);
   const [receivedInput, setReceivedInput] = useState<string>(String(total));
+  const [customerName, setCustomerName] = useState<string>("");
+  const [customerPhone, setCustomerPhone] = useState<string>("");
   const [referenceNote, setReferenceNote] = useState<string>("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -81,9 +85,10 @@ function CheckoutModalContent({
   const isShortage = !isOwing && amountReceived < total;
   const shortageAmount = Number((total - amountReceived).toFixed(2));
   const dueAmount = isOwing ? Number((total - amountReceived).toFixed(2)) : 0;
+  const isOwingMissingDetails = isOwing && (!customerName.trim() || !customerPhone.trim());
 
   const handleCompleteSale = async () => {
-    if (items.length === 0 || isShortage || isSubmitting) return;
+    if (items.length === 0 || isShortage || isOwingMissingDetails || isSubmitting) return;
 
     try {
       setIsSubmitting(true);
@@ -110,7 +115,11 @@ function CheckoutModalContent({
         totalAmount: total,
         paymentMethod,
         amountReceived,
-        changeAmount,
+        changeAmount: isOwing ? 0 : changeAmount,
+        customerName: customerName.trim() || undefined,
+        customerPhone: customerPhone.trim() || undefined,
+        dueAmount: isOwing ? dueAmount : 0,
+        dueStatus: isOwing ? (amountReceived > 0 ? "partially_paid" : "unpaid") : "cleared",
         notes: referenceNote.trim() || undefined,
         status: "completed",
       });
@@ -267,24 +276,96 @@ function CheckoutModalContent({
         )}
       </div>
 
+      {/* Customer Name & Phone Information (Mandatory for Owing, Optional for Cash) */}
+      <div
+        className={`p-3 rounded-lg border transition-all ${
+          isOwing ? "bg-amber-50/70 border-amber-300" : "bg-slate-50 border-slate-200"
+        }`}
+      >
+        <div className="flex items-center justify-between mb-2">
+          <label className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+            <User className="w-3.5 h-3.5 text-slate-500" />
+            <span>Customer Information</span>
+            {isOwing && (
+              <span className="text-amber-700 font-extrabold text-[11px]">
+                *Required for Owing
+              </span>
+            )}
+          </label>
+          {isOwing && (
+            <span className="text-[10px] font-semibold text-amber-700 bg-amber-100 px-2 py-0.5 rounded-full border border-amber-200">
+              বাকি খাতা রেকর্ড
+            </span>
+          )}
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+          <div>
+            <label
+              htmlFor="customer-name"
+              className="block text-[11px] font-medium text-slate-600 mb-1"
+            >
+              Customer Name {isOwing && <span className="text-red-500 font-bold">*</span>}
+            </label>
+            <input
+              id="customer-name"
+              type="text"
+              value={customerName}
+              onChange={(e) => setCustomerName(e.target.value)}
+              placeholder="e.g. Rahim Mia"
+              className={`w-full px-3 py-2 bg-white border rounded-lg text-xs text-slate-900 focus:outline-none focus:ring-2 ${
+                isOwing && !customerName.trim()
+                  ? "border-amber-400 focus:ring-amber-500"
+                  : "border-slate-300 focus:ring-emerald-500"
+              }`}
+            />
+          </div>
+
+          <div>
+            <label
+              htmlFor="customer-phone"
+              className="block text-[11px] font-medium text-slate-600 mb-1"
+            >
+              Phone Number {isOwing && <span className="text-red-500 font-bold">*</span>}
+            </label>
+            <div className="relative">
+              <Phone className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
+              <input
+                id="customer-phone"
+                type="tel"
+                value={customerPhone}
+                onChange={(e) => setCustomerPhone(e.target.value)}
+                placeholder="e.g. 01712345678"
+                className={`w-full pl-8 pr-3 py-2 bg-white border rounded-lg text-xs text-slate-900 focus:outline-none focus:ring-2 ${
+                  isOwing && !customerPhone.trim()
+                    ? "border-amber-400 focus:ring-amber-500"
+                    : "border-slate-300 focus:ring-emerald-500"
+                }`}
+              />
+            </div>
+          </div>
+        </div>
+
+        {isOwingMissingDetails && (
+          <p className="mt-2 text-[11px] text-amber-800 flex items-center gap-1 font-medium">
+            <AlertCircle className="w-3.5 h-3.5 shrink-0 text-amber-600" />
+            Please provide both customer name and phone number to complete an owing sale.
+          </p>
+        )}
+      </div>
+
       {/* Optional Notes or Transaction Ref */}
       <div>
-        <label htmlFor="notes-ref" className="block text-xs font-semibold text-slate-700 mb-1">
-          {paymentMethod === "Owing"
-            ? "Customer Name / Phone (for Owing record)"
-            : "Sale Notes / Customer Phone (Optional)"}
+        <label htmlFor="notes-ref" className="block text-[11px] font-medium text-slate-600 mb-1">
+          Sale Notes / Doctor Reference (Optional)
         </label>
         <input
           id="notes-ref"
           type="text"
           value={referenceNote}
           onChange={(e) => setReferenceNote(e.target.value)}
-          placeholder={
-            paymentMethod === "Owing"
-              ? "e.g. Rahim Mia / 017xxxxxxxx"
-              : "e.g. Dr. prescription # / Patient name"
-          }
-          className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+          placeholder="e.g. Dr. prescription # / Emergency purchase"
+          className="w-full px-3 py-1.5 bg-white border border-slate-300 rounded-lg text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500"
         />
       </div>
 
@@ -300,9 +381,9 @@ function CheckoutModalContent({
         <button
           type="button"
           onClick={handleCompleteSale}
-          disabled={isShortage || isSubmitting || items.length === 0}
+          disabled={isShortage || isSubmitting || items.length === 0 || isOwingMissingDetails}
           className={`flex-1 flex items-center justify-center gap-2 py-3 sm:py-2.5 px-4 rounded-lg font-bold text-xs text-white transition-all shadow-sm ${
-            isShortage || items.length === 0 || isSubmitting
+            isShortage || items.length === 0 || isSubmitting || isOwingMissingDetails
               ? "bg-slate-300 cursor-not-allowed text-slate-500"
               : "bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 shadow-emerald-200 cursor-pointer"
           }`}

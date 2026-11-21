@@ -81,6 +81,10 @@ export interface Sale {
   paymentMethod: PaymentMethod;
   amountReceived: number;
   changeAmount: number;
+  customerName?: string;
+  customerPhone?: string;
+  dueAmount?: number;
+  dueStatus?: "unpaid" | "partially_paid" | "cleared";
   notes?: string;
   status: "completed" | "cancelled";
 }
@@ -105,6 +109,8 @@ export interface DashboardMetrics {
   monthlySalesAmount: number;
   monthlyTransactionsCount: number;
   totalTransactions: number;
+  totalOwingAmount: number;
+  owingTransactionsCount: number;
   weeklySales: { day: string; date: string; amount: number; count: number }[];
   monthlySales: { month: string; amount: number; count: number }[];
   topSellingMedicines: {

@@ -79,9 +79,17 @@ export function ReceiptModal({
               <span className="text-slate-500">Cashier:</span>
               <span>{sale.cashierName} (Counter 01)</span>
             </div>
+            {sale.customerName && (
+              <div className="flex justify-between bg-amber-50/60 p-1 rounded border border-amber-200">
+                <span className="text-amber-800 font-medium">Customer:</span>
+                <span className="font-bold text-slate-900 text-right">
+                  {sale.customerName} {sale.customerPhone ? `(${sale.customerPhone})` : ""}
+                </span>
+              </div>
+            )}
             <div className="flex justify-between">
               <span className="text-slate-500">Payment:</span>
-              <span className="font-semibold">{sale.paymentMethod}</span>
+              <span className="font-semibold">{sale.paymentMethod === "Owing" ? "Owing (বাকি)" : "Cash"}</span>
             </div>
           </div>
 
@@ -155,7 +163,18 @@ export function ReceiptModal({
               <span className="text-slate-500">Payment Mode:</span>
               <span className="font-semibold">{sale.paymentMethod === "Owing" ? "Owing (বাকি)" : "Cash"}</span>
             </div>
-            {sale.paymentMethod === "Owing" ? (
+            {sale.dueAmount !== undefined && sale.dueAmount > 0 ? (
+              <div className="space-y-1">
+                <div className="flex justify-between">
+                  <span className="text-slate-500">Paid Amount:</span>
+                  <span className="font-semibold">৳{sale.amountReceived.toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between text-amber-900 font-bold bg-amber-50 p-1.5 rounded border border-amber-300">
+                  <span>Due Amount (বাকি):</span>
+                  <span>৳{sale.dueAmount.toFixed(2)}</span>
+                </div>
+              </div>
+            ) : sale.paymentMethod === "Owing" ? (
               <div className="flex justify-between text-amber-800 font-semibold">
                 <span>Due (বাকি):</span>
                 <span>৳{(sale.totalAmount - (sale.amountReceived || 0)).toFixed(2)}</span>
@@ -170,6 +189,11 @@ export function ReceiptModal({
                   <span className="text-slate-500">Change Returned:</span>
                   <span className="font-semibold text-slate-900">৳{sale.changeAmount.toFixed(2)}</span>
                 </div>
+                {sale.dueStatus === "cleared" && sale.customerName && (
+                  <div className="text-[10px] text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200 font-medium text-center mt-1">
+                    ✓ All previous dues fully cleared & settled
+                  </div>
+                )}
               </>
             )}
           </div>

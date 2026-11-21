@@ -19,7 +19,29 @@ function getStoredSales(): Sale[] {
       localStorage.setItem(SALES_STORAGE_KEY, JSON.stringify(initialSales));
       return initialSales;
     }
-    return parsed;
+    return parsed.map((s: Sale) => {
+      const isOwing = s.paymentMethod === "Owing";
+      const due =
+        typeof s.dueAmount === "number"
+          ? s.dueAmount
+          : isOwing
+          ? Math.max(0, Number((s.totalAmount - (s.amountReceived || 0)).toFixed(2)))
+          : 0;
+
+      return {
+        ...s,
+        dueAmount: due,
+        dueStatus:
+          s.dueStatus ||
+          (isOwing
+            ? due === 0
+              ? "cleared"
+              : (s.amountReceived || 0) > 0
+              ? "partially_paid"
+              : "unpaid"
+            : "cleared"),
+      };
+    });
   } catch (err) {
     console.error("Failed to load sales from localStorage:", err);
     return initialSales;
@@ -49,6 +71,7 @@ export interface ISalesRepository {
   getById(id: string): Promise<Sale | null>;
   getByInvoiceNumber(invoiceNumber: string): Promise<Sale | null>;
   create(saleInput: Omit<Sale, "id" | "invoiceNumber" | "createdAt">): Promise<Sale>;
+  collectDue(saleId: string, paymentAmount: number, notes?: string): Promise<Sale>;
   search(filters: {
     query?: string;
     paymentMethod?: PaymentMethod | "All";
@@ -96,6 +119,49 @@ export const salesRepository: ISalesRepository = {
     return newSale;
   },
 
+  async collectDue(saleId: string, paymentAmount: number, notes?: string): Promise<Sale> {
+    const sales = getStoredSales();
+    const saleIndex = sales.findIndex((s) => s.id === saleId);
+    if (saleIndex === -1) {
+      throw new Error(`Sale with ID ${saleId} not found`);
+    }
+
+    const sale = sales[saleIndex];
+    const currentReceived = Number(sale.amountReceived || 0);
+    const payAmount = Math.max(0, Number(paymentAmount));
+    const newAmountReceived = Number((currentReceived + payAmount).toFixed(2));
+    const newDueAmount = Math.max(0, Number((sale.totalAmount - newAmountReceived).toFixed(2)));
+
+    const isFullyPaid = newDueAmount <= 0;
+    const paymentTimestamp = new Date().toLocaleDateString("en-GB", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+
+    const paymentLog = isFullyPaid
+      ? `[Due settled: ৳${payAmount.toFixed(2)} paid on ${paymentTimestamp}. Fully cleared]`
+      : `[Partial payment: ৳${payAmount.toFixed(2)} paid on ${paymentTimestamp}. Remaining due: ৳${newDueAmount.toFixed(2)}]`;
+
+    const updatedNotes = sale.notes ? `${sale.notes} | ${paymentLog}` : paymentLog;
+
+    const updatedSale: Sale = {
+      ...sale,
+      amountReceived: isFullyPaid ? sale.totalAmount : newAmountReceived,
+      dueAmount: isFullyPaid ? 0 : newDueAmount,
+      dueStatus: isFullyPaid ? "cleared" : "partially_paid",
+      // When all money is paid, permanently convert to Cash / main sale so it is removed from owing!
+      paymentMethod: isFullyPaid ? "Cash" : "Owing",
+      notes: notes ? `${updatedNotes} (${notes})` : updatedNotes,
+    };
+
+    sales[saleIndex] = updatedSale;
+    saveStoredSales(sales);
+    return updatedSale;
+  },
+
   async search(filters: {
     query?: string;
     paymentMethod?: PaymentMethod | "All";
@@ -124,6 +190,8 @@ export const salesRepository: ISalesRepository = {
       return (
         s.invoiceNumber.toLowerCase().includes(q) ||
         s.cashierName.toLowerCase().includes(q) ||
+        (s.customerName && s.customerName.toLowerCase().includes(q)) ||
+        (s.customerPhone && s.customerPhone.toLowerCase().includes(q)) ||
         s.items.some((item) => item.name.toLowerCase().includes(q) || item.genericName.toLowerCase().includes(q))
       );
     });
@@ -144,6 +212,23 @@ export const salesRepository: ISalesRepository = {
 
     let monthlySalesAmount = 0;
     let monthlyTransactionsCount = 0;
+
+    let totalOwingAmount = 0;
+    let owingTransactionsCount = 0;
+
+    allSales.forEach((sale) => {
+      const due =
+        typeof sale.dueAmount === "number"
+          ? sale.dueAmount
+          : sale.paymentMethod === "Owing"
+          ? Math.max(0, sale.totalAmount - (sale.amountReceived || 0))
+          : 0;
+
+      if (due > 0) {
+        totalOwingAmount += due;
+        owingTransactionsCount += 1;
+      }
+    });
 
     allSales.forEach((sale) => {
       const sDate = new Date(sale.createdAt);
@@ -303,6 +388,8 @@ export const salesRepository: ISalesRepository = {
       monthlyTransactionsCount,
       totalRevenue,
       totalTransactions,
+      totalOwingAmount: Number(totalOwingAmount.toFixed(2)),
+      owingTransactionsCount,
       averageTransactionValue,
       totalMedicinesSold,
       weeklySales,
