@@ -174,6 +174,7 @@ export interface User {
   status: UserStatus;
   password?: string;
   phone?: string;
+  isDeleted?: boolean;
   createdAt?: string;
 }
 
