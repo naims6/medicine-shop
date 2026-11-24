@@ -1,8 +1,10 @@
 "use client";
 
+import { useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { Menu, LogOut } from "lucide-react";
 import { useAuth } from "@/stores/AuthContext";
+import { ConfirmModal } from "@/components/shared/ConfirmModal";
 
 function getInitials(name: string): string {
   if (!name) return "AD";
@@ -54,21 +56,24 @@ export function TopNav({ onToggleMobileSidebar }: TopNavProps) {
   const router = useRouter();
   const { user, logout } = useAuth();
 
+  const [logoutOpen, setLogoutOpen] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+
   const meta = titleMap[pathname] || {
     title: "Shodesh Pharmacy POS",
     subtitle: "Pharmacy Management",
   };
 
-  const handleLogout = async () => {
-    if (confirm("Are you sure you want to log out?")) {
-      try {
-        await logout();
-      } catch {
-        // Best-effort: still leave the authenticated area even if the server
-        // logout call fails (e.g. network). The session query revalidates.
-      } finally {
-        router.replace("/");
-      }
+  const handleLogoutConfirm = async () => {
+    setIsLoggingOut(true);
+    try {
+      await logout();
+    } catch {
+      // Best-effort: navigate away even if the server call fails.
+    } finally {
+      setIsLoggingOut(false);
+      setLogoutOpen(false);
+      router.replace("/");
     }
   };
 
@@ -76,57 +81,73 @@ export function TopNav({ onToggleMobileSidebar }: TopNavProps) {
   const displayRole = user?.role ?? "";
 
   return (
-    <header className="h-16 bg-white border-b border-slate-200 px-3 sm:px-4 md:px-6 flex items-center justify-between shrink-0">
-      <div className="flex items-center gap-2 sm:gap-3 min-w-0">
-        <button
-          onClick={onToggleMobileSidebar}
-          className="md:hidden p-2 text-slate-500 hover:text-slate-900 rounded-lg hover:bg-slate-100 shrink-0"
-          aria-label="Toggle Navigation"
-        >
-          <Menu className="w-5 h-5" />
-        </button>
+    <>
+      <header className="h-16 bg-white border-b border-slate-200 px-3 sm:px-4 md:px-6 flex items-center justify-between shrink-0">
+        <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+          <button
+            onClick={onToggleMobileSidebar}
+            className="md:hidden p-2 text-slate-500 hover:text-slate-900 rounded-lg hover:bg-slate-100 shrink-0"
+            aria-label="Toggle Navigation"
+          >
+            <Menu className="w-5 h-5" />
+          </button>
 
-        <div className="min-w-0">
-          <h1 className="text-sm sm:text-base md:text-lg font-bold text-slate-900 leading-tight truncate">
-            {meta.title}
-          </h1>
-          <p className="text-xs text-slate-500 hidden sm:block truncate">
-            {meta.subtitle}
-          </p>
-        </div>
-      </div>
-
-      <div className="flex items-center gap-2 sm:gap-3 shrink-0">
-        <div className="h-5 w-px bg-slate-200" />
-
-        {/* Admin / User Profile */}
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 flex items-center justify-center font-bold text-xs shrink-0 select-none">
-            {getInitials(displayName)}
-          </div>
-          <div className="flex flex-col text-left">
-            <span
-              className="text-xs font-semibold text-slate-800 leading-tight max-w-[85px] sm:max-w-[140px] md:max-w-[170px] truncate"
-              title={displayName}
-            >
-              {displayName}
-            </span>
-            <span className="text-[10px] text-slate-500 font-medium capitalize leading-tight">
-              {displayRole}
-            </span>
+          <div className="min-w-0">
+            <h1 className="text-sm sm:text-base md:text-lg font-bold text-slate-900 leading-tight truncate">
+              {meta.title}
+            </h1>
+            <p className="text-xs text-slate-500 hidden sm:block truncate">
+              {meta.subtitle}
+            </p>
           </div>
         </div>
 
-        {/* Logout Button */}
-        <button
-          onClick={handleLogout}
-          title="Logout"
-          className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-slate-200 hover:bg-rose-50 hover:text-rose-600 hover:border-rose-200 text-slate-600 text-xs font-medium transition-colors cursor-pointer shrink-0"
-        >
-          <LogOut className="w-3.5 h-3.5" />
-          <span className="hidden sm:inline">Logout</span>
-        </button>
-      </div>
-    </header>
+        <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+          <div className="h-5 w-px bg-slate-200" />
+
+          {/* Admin / User Profile */}
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 flex items-center justify-center font-bold text-xs shrink-0 select-none">
+              {getInitials(displayName)}
+            </div>
+            <div className="flex flex-col text-left">
+              <span
+                className="text-xs font-semibold text-slate-800 leading-tight max-w-[85px] sm:max-w-[140px] md:max-w-[170px] truncate"
+                title={displayName}
+              >
+                {displayName}
+              </span>
+              <span className="text-[10px] text-slate-500 font-medium capitalize leading-tight">
+                {displayRole}
+              </span>
+            </div>
+          </div>
+
+          {/* Logout Button */}
+          <button
+            onClick={() => setLogoutOpen(true)}
+            title="Logout"
+            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-slate-200 hover:bg-rose-50 hover:text-rose-600 hover:border-rose-200 text-slate-600 text-xs font-medium transition-colors cursor-pointer shrink-0"
+          >
+            <LogOut className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">Logout</span>
+          </button>
+        </div>
+      </header>
+
+      <ConfirmModal
+        isOpen={logoutOpen}
+        title="Log out"
+        description="Are you sure you want to log out?"
+        confirmLabel="Log out"
+        cancelLabel="Stay"
+        confirmVariant="destructive"
+        isPending={isLoggingOut}
+        pendingLabel="Logging out…"
+        icon={<LogOut className="w-4 h-4 text-rose-500" />}
+        onCancel={() => setLogoutOpen(false)}
+        onConfirm={handleLogoutConfirm}
+      />
+    </>
   );
 }

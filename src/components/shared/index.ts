@@ -10,3 +10,4 @@ export { PasswordInput } from "./PasswordInput";
 export { DataTable } from "./DataTable";
 export type { DataTableColumn } from "./DataTable";
 export { AdminOnly } from "./AdminOnly";
+export { ConfirmModal } from "./ConfirmModal";
