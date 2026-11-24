@@ -178,3 +178,72 @@ export interface User {
   createdAt?: string;
 }
 
+
+
+// ---------------------------------------------------------------------------
+// Auth & API integration layer
+// ---------------------------------------------------------------------------
+// These types describe the real NestJS backend responses. The legacy `User`
+// type above is retained only for not-yet-migrated mock features and will be
+// unified with `AuthUser` once the Users module moves to the API.
+
+/** Backend user role enum (src/common/types/role.enum.ts). */
+export type AuthRole = "Admin" | "Salesman";
+
+/** Backend user status enum (src/common/types/user-status.enum.ts). */
+export type AuthStatus = "Active" | "Inactive";
+
+/** Authenticated user as returned by the backend (UserResponseDto). */
+export interface AuthUser {
+  id: string;
+  name: string;
+  email: string;
+  role: AuthRole;
+  status: AuthStatus;
+  phone: string | null;
+  isDeleted: boolean;
+  createdAt: string; // ISO 8601
+  updatedAt: string; // ISO 8601
+}
+
+/** Credentials for POST /auth/login. */
+export interface LoginPayload {
+  email: string;
+  password: string;
+}
+
+/** Success envelope returned by every backend endpoint (TransformInterceptor). */
+export interface ApiEnvelope<T> {
+  success: true;
+  statusCode: number;
+  message?: string;
+  data: T;
+}
+
+export interface PaginationMeta {
+  page: number;
+  limit: number;
+  total: number;
+  totalPages: number;
+  hasNextPage: boolean;
+  hasPreviousPage: boolean;
+}
+
+/** Success envelope for paginated endpoints. */
+export interface PaginatedApiEnvelope<T> {
+  success: true;
+  statusCode: number;
+  data: T[];
+  meta: PaginationMeta;
+  message?: string;
+}
+
+/** Error envelope returned on failure (HttpExceptionFilter). */
+export interface ApiErrorEnvelope {
+  success: false;
+  statusCode: number;
+  message: string;
+  errors?: unknown;
+  timestamp: string;
+  path: string;
+}

@@ -2,17 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import {
-  Menu,
-  Clock,
-  RotateCcw,
-  CheckCircle,
-  LogOut,
-} from "lucide-react";
-import { medicineRepository } from "@/repositories/medicineRepository";
-import { salesRepository } from "@/repositories/salesRepository";
-import { userRepository } from "@/repositories/userRepository";
-import { initialUsers } from "@/data/mockUsers";
+import { Menu, Clock, LogOut } from "lucide-react";
 import { useAuth } from "@/stores/AuthContext";
 
 function getInitials(name: string): string {
@@ -65,8 +55,6 @@ export function TopNav({ onToggleMobileSidebar }: TopNavProps) {
   const router = useRouter();
   const { user, logout } = useAuth();
   const [currentDateTime, setCurrentDateTime] = useState<string>("");
-  const [isResetting, setIsResetting] = useState(false);
-  const [showResetSuccess, setShowResetSuccess] = useState(false);
 
   useEffect(() => {
     const updateTime = () => {
@@ -97,33 +85,21 @@ export function TopNav({ onToggleMobileSidebar }: TopNavProps) {
     subtitle: "Pharmacy Management",
   };
 
-  const handleResetData = async () => {
-    if (confirm("Reset demo data to initial sample medicines, sales & 5 fake users?")) {
-      setIsResetting(true);
-      await medicineRepository.resetToDefault();
-      await salesRepository.resetToDefault();
-      await userRepository.resetToDefault();
-      localStorage.removeItem("pharmacare_pos_cart_v1");
-      localStorage.setItem("pharmacare_auth_session_v1", JSON.stringify(initialUsers[0]));
-      sessionStorage.removeItem("pharmacare_explicit_logout");
-      setShowResetSuccess(true);
-      setTimeout(() => {
-        setIsResetting(false);
-        window.location.reload();
-      }, 600);
-    }
-  };
-
   const handleLogout = async () => {
     if (confirm("Are you sure you want to log out?")) {
-      await logout();
-      router.replace("/login");
+      try {
+        await logout();
+      } catch {
+        // Best-effort: still leave the authenticated area even if the server
+        // logout call fails (e.g. network). The session query revalidates.
+      } finally {
+        router.replace("/login");
+      }
     }
   };
 
-  const currentUser = user || initialUsers[0];
-  const displayName = currentUser?.name || "Dr. Tanvir Ahmed";
-  const displayRole = currentUser?.role || "Admin";
+  const displayName = user?.name ?? "User";
+  const displayRole = user?.role ?? "";
 
   return (
     <header className="h-16 bg-white border-b border-slate-200 px-3 sm:px-4 md:px-6 flex items-center justify-between shrink-0">
@@ -154,30 +130,6 @@ export function TopNav({ onToggleMobileSidebar }: TopNavProps) {
             {currentDateTime || "Loading..."}
           </span>
         </div>
-
-        {/* Reset Demo Data button */}
-        <button
-          onClick={handleResetData}
-          disabled={isResetting}
-          title="Reset demo data to initial defaults"
-          className="flex items-center gap-1.5 text-xs font-medium text-slate-600 hover:text-slate-900 bg-white hover:bg-slate-50 border border-slate-200 px-2 sm:px-2.5 py-1.5 rounded-lg transition-colors cursor-pointer"
-        >
-          {showResetSuccess ? (
-            <>
-              <CheckCircle className="w-3.5 h-3.5 text-emerald-600" />
-              <span className="hidden sm:inline text-emerald-700">
-                Reset Done
-              </span>
-            </>
-          ) : (
-            <>
-              <RotateCcw
-                className={`w-3.5 h-3.5 ${isResetting ? "animate-spin text-emerald-600" : "text-slate-400"}`}
-              />
-              <span className="hidden sm:inline">Reset</span>
-            </>
-          )}
-        </button>
 
         <div className="h-5 w-px bg-slate-200" />
 
