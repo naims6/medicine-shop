@@ -19,7 +19,8 @@ Guidelines, architecture patterns, and conventions for AI agents and developers 
 
 - **Framework**: Next.js 16 (App Router)
 - **Language**: TypeScript (strict mode, no `any`)
-- **UI & Styling**: Tailwind CSS v4 (`@tailwindcss/turbopack`), Lucide React icons
+- **UI & Styling**: Tailwind CSS v4 (`@tailwindcss/turbopack`), **shadcn/ui** component primitives, Lucide React icons
+- **Component Library**: shadcn/ui — Radix UI primitives styled with Tailwind; all UI atoms live in `src/components/ui/`
 - **State Management**: React Context (`AuthContext` wraps TanStack Query) + TanStack Query (server state / data fetching)
 - **Forms & Validation**: React Hook Form (`^7.x`) + Zod (`^4.x`) with `@hookform/resolvers`
 - **Charts & Analytics**: Recharts
@@ -44,7 +45,8 @@ src/
 │   ├── pos/              # Point of sale cart, barcode/search, receipt modal
 │   ├── providers/        # AppProviders (QueryClientProvider)
 │   ├── returns/          # Return processing & refund tables
-│   ├── ui/               # Reusable primitives (Buttons, Inputs, Badges, Modals)
+│   ├── shared/           # Cross-feature reusable components (PageHeader, FormField, Pagination, LoadingSpinner, StatCard, DeleteConfirmModal, Modal, TableSkeleton)
+│   ├── ui/               # shadcn/ui primitives — Button, Input, Card, Badge, Alert, Dialog, Select, Label, Skeleton, Separator (never edit directly)
 │   └── users/            # User management table & role assignment forms
 ├── services/            # API LAYER — one function per backend endpoint (single source of truth)
 │   └── auth.service.ts  # getMe / login / logout
@@ -99,7 +101,55 @@ src/
 
 ---
 
-## 5. Integrating with the NestJS Backend
+### Rule 6: shadcn/ui — Component-First UI
+
+**Always prefer a shadcn/ui primitive over hand-rolled HTML before writing any custom markup.**
+
+| Need | Use |
+|------|-----|
+| Any container / panel | `Card`, `CardHeader`, `CardTitle`, `CardDescription`, `CardContent`, `CardFooter` |
+| Buttons | `Button` with the correct variant (`default`, `outline`, `ghost`, `destructive`, `amber`) |
+| Text inputs | `Input` |
+| Dropdowns | `Select`, `SelectTrigger`, `SelectContent`, `SelectItem` |
+| Field labels | `Label` |
+| Badges / chips | `Badge` with the correct variant (`default`, `success`, `warning`, `info`, `purple`, `secondary`, `destructive`) |
+| Inline alerts | `Alert`, `AlertDescription` |
+| Loading shimmer | `Skeleton` |
+| Modal dialogs | `Dialog`, `DialogContent`, `DialogHeader`, `DialogTitle`, `DialogDescription`, `DialogBody`, `DialogFooter` |
+| Dividers | `Separator` |
+
+**Rules:**
+1. Import primitives from `@/components/ui/<primitive>` only.
+2. Never modify files inside `src/components/ui/` — extend via composition instead.
+3. Use the `cn()` helper from `@/lib/utils` to merge variant classes.
+4. If a shadcn primitive doesn't exist for a need, check whether a `shared/` component already covers it before writing new markup.
+
+---
+
+### Rule 7: Reusable Shared Components
+
+`src/components/shared/` contains cross-feature building blocks. **Always use these before duplicating their patterns.**
+
+| Component | Purpose | Key props |
+|-----------|---------|-----------|
+| `PageHeader` | Page-level heading with optional icon and trailing action slot | `title`, `description`, `icon`, `action` |
+| `FormField` | Wraps any form control with a `Label` and inline error message | `label`, `htmlFor`, `required`, `error`, `children` |
+| `LoadingSpinner` | CSS-only spinner; `PageLoader` for full-page loading states | `size`, `color`, `label`, `centered` |
+| `Pagination` | Server-side pagination bar with ellipsis collapse | `meta`, `page`, `onPageChange`, `isFetching`, `itemLabel` |
+| `StatCard` | Small metric tile used in summary grids | `label`, `value`, `color` |
+| `TableSkeleton` | Pulsing table row skeleton for loading states | `rows`, `cols` |
+| `DeleteConfirmModal` | Reusable soft-delete confirmation dialog | `isOpen`, `title`, `description`, `onCancel`, `onConfirm`, `isDeleting` |
+| `Modal` | Generic dialog shell (title + description + children) | `isOpen`, `onClose`, `title`, `description`, `maxWidth` |
+
+**Conventions:**
+- Export all shared components through `src/components/shared/index.ts`.
+- Keep shared components stateless (or manage only display-local state like `show/hide`). Data fetching and mutations stay in pages or feature components.
+- When you create a pattern that appears in two or more places, extract it to `shared/` immediately rather than duplicating it inline.
+- Compose, don't extend: shared components should compose shadcn primitives rather than contain raw Tailwind from scratch.
+
+---
+
+## 8. Integrating with the NestJS Backend
 
 Auth is already wired up against the real API (httpOnly cookies, TanStack Query, single-flight refresh). Other modules migrate the same way.
 
@@ -133,7 +183,7 @@ Auth is already wired up against the real API (httpOnly cookies, TanStack Query,
 
 ---
 
-## 6. Developer & Agent Workflow Commands
+## 9. Developer & Agent Workflow Commands
 
 ```bash
 # Install dependencies

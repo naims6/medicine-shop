@@ -29,7 +29,7 @@ import {
 } from "lucide-react";
 import { MedicineModal } from "@/components/medicines/MedicineModal";
 import { MedicineDetailModal } from "@/components/medicines/MedicineDetailModal";
-import { Modal } from "@/components/ui/Modal";
+import { Modal } from "@/components/shared/Modal";
 
 const allDosageForms: (DosageForm | "All")[] = [
   "All",

@@ -19,13 +19,17 @@ function ProtectedAppContent({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     // Only dashboard routes require authentication
     if (!isLoading && !isAuthenticated && isDashboardRoute) {
-      router.replace("/login");
+      router.replace("/");
     }
   }, [isAuthenticated, isLoading, isDashboardRoute, router]);
 
   // Public pages (Home page `/`, Login page `/login`, etc.) render children directly
   if (!isDashboardRoute) {
     return <>{children}</>;
+  }
+
+  if (!isLoading && !isAuthenticated) {
+    return null;
   }
 
   return (
@@ -59,15 +63,15 @@ function ProtectedAppContent({ children }: { children: React.ReactNode }) {
 
         {/* Main Content Area */}
         <div className="flex flex-col flex-1 h-full min-w-0 overflow-hidden">
-          <TopNav onToggleMobileSidebar={() => setMobileSidebarOpen((prev) => !prev)} />
+          <TopNav
+            onToggleMobileSidebar={() => setMobileSidebarOpen((prev) => !prev)}
+          />
           <main className="flex-1 overflow-y-auto bg-slate-50/70 p-2 sm:p-4 md:p-6">
             <div className="max-w-7xl mx-auto h-full flex flex-col">
-              {isLoading || !isAuthenticated ? (
+              {isLoading ? (
                 <div className="flex-1 flex flex-col items-center justify-center py-24 gap-2">
                   <div className="w-6 h-6 border-2 border-emerald-600 border-t-transparent rounded-full animate-spin" />
-                  <p className="text-xs text-slate-500 font-sans">
-                    {isLoading ? "Loading..." : "Redirecting to login..."}
-                  </p>
+                  <p className="text-xs text-slate-500 font-sans">Loading...</p>
                 </div>
               ) : (
                 children

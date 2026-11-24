@@ -6,7 +6,7 @@ export function proxy(request: NextRequest) {
     request.cookies.has("refreshToken") || request.cookies.has("accessToken");
 
   if (!hasAuthCookie) {
-    return NextResponse.redirect(new URL("/login", request.url));
+    return NextResponse.redirect(new URL("/", request.url));
   }
 
   return NextResponse.next();

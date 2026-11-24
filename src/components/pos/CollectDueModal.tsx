@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Modal } from "@/components/ui/Modal";
+import { Modal } from "@/components/shared/Modal";
 import { Sale } from "@/types";
 import { salesRepository } from "@/repositories/salesRepository";
 import {

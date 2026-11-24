@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useMemo } from "react";
-import { Modal } from "@/components/ui/Modal";
+import { Modal } from "@/components/shared/Modal";
 import { Sale, PaymentMethod, Return } from "@/types";
 import { formatCurrency } from "@/lib/utils";
 import {
