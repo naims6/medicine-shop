@@ -1,5 +1,23 @@
 import * as z from "zod";
 
+export const userFormSchema = z.object({
+  name: z.string().min(1, "Name is required").max(100),
+  email: z
+    .string()
+    .min(1, "Email is required")
+    .email("Enter a valid email address"),
+  password: z
+    .string()
+    .min(6, "Password must be at least 6 characters")
+    .optional()
+    .or(z.literal("")),
+  role: z.enum(["Admin", "Salesman"] as const),
+  status: z.enum(["Active", "Inactive"] as const),
+  phone: z.string().max(20).optional().or(z.literal("")),
+});
+
+export type UserFormData = z.infer<typeof userFormSchema>;
+
 // ---------------------------------------------------------------------------
 // Create User
 // ---------------------------------------------------------------------------
@@ -12,7 +30,6 @@ export const createUserSchema = z.object({
     .email("Enter a valid email address"),
   password: z.string().min(6, "Password must be at least 6 characters"),
   role: z.enum(["Admin", "Salesman"] as const),
-  // status is always provided by the form's defaultValues — no .default() needed
   status: z.enum(["Active", "Inactive"] as const),
   phone: z.string().max(20).optional().or(z.literal("")),
 });

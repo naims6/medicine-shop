@@ -15,7 +15,7 @@ import {
   ArrowLeft,
   AlertTriangle,
 } from "lucide-react";
-import { Modal } from "@/components/ui/Modal";
+import { Modal } from "@/components/shared/Modal";
 
 interface CartPanelProps {
   onOpenCheckout: () => void;

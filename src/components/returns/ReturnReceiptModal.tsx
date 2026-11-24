@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useRef } from "react";
-import { Modal } from "@/components/ui/Modal";
+import { Modal } from "@/components/shared/Modal";
 import { Return } from "@/types";
 import { formatCurrency, formatDateTime } from "@/lib/utils";
 import { Printer } from "lucide-react";

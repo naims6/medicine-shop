@@ -3,10 +3,24 @@
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
+import { Store, Eye, EyeOff, AlertCircle } from "lucide-react";
+
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from "@/components/ui/card";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { FormField } from "@/components/shared/FormField";
+import { LoadingSpinner } from "@/components/shared/LoadingSpinner";
+
 import { useAuth } from "@/stores/AuthContext";
 import { isApiError } from "@/lib/apiErrors";
 import { loginResolver, type LoginFormData } from "@/schemas/auth.schema";
-import { Store, Eye, EyeOff, AlertCircle } from "lucide-react";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -45,17 +59,18 @@ export default function LoginPage() {
   if (isLoading || isAuthenticated) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-50">
-        <div className="w-6 h-6 border-2 border-emerald-600 border-t-transparent rounded-full animate-spin" />
+        <LoadingSpinner size="w-6 h-6" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen w-full flex items-center justify-center bg-slate-50 p-4 font-sans text-slate-900">
+    <div className="min-h-screen w-full flex items-center justify-center bg-slate-50 p-4">
       <div className="w-full max-w-sm space-y-6">
+
         {/* Brand */}
         <div className="flex flex-col items-center gap-2">
-          <div className="w-10 h-10 rounded-xl bg-emerald-600 flex items-center justify-center text-white">
+          <div className="w-11 h-11 rounded-xl bg-emerald-600 flex items-center justify-center text-white shadow-sm">
             <Store className="w-5 h-5" />
           </div>
           <div className="text-center">
@@ -66,74 +81,108 @@ export default function LoginPage() {
           </div>
         </div>
 
-        {/* Card */}
-        <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-xs space-y-4">
-          <div>
-            <h1 className="text-lg font-bold text-slate-900">Login</h1>
-            <p className="text-xs text-slate-500 mt-1">
+        {/* Login card */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Sign in to your account</CardTitle>
+            <CardDescription>
               Enter your credentials to access the POS system.
-            </p>
-          </div>
+            </CardDescription>
+          </CardHeader>
 
-          {serverError && (
-            <div className="p-3 rounded-lg bg-rose-50 border border-rose-200 text-rose-700 text-xs flex items-start gap-2">
-              <AlertCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
-              <span>{serverError}</span>
-            </div>
-          )}
+          <CardContent>
+            {serverError && (
+              <Alert variant="destructive" className="mb-4">
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>{serverError}</AlertDescription>
+              </Alert>
+            )}
 
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-3.5" noValidate>
-            <div className="space-y-1">
-              <label className="block text-xs font-medium text-slate-700" htmlFor="email">
-                Email
-              </label>
-              <input
-                id="email"
-                type="email"
-                placeholder="name@example.com"
-                className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 font-sans"
-                {...register("email")}
-              />
-              {errors.email && (
-                <p className="text-[11px] text-rose-600">{errors.email.message}</p>
-              )}
-            </div>
-
-            <div className="space-y-1">
-              <label className="block text-xs font-medium text-slate-700" htmlFor="password">
-                Password
-              </label>
-              <div className="relative">
-                <input
-                  id="password"
-                  type={showPassword ? "text" : "password"}
-                  placeholder="••••••••"
-                  className="w-full pl-3 pr-9 py-2 bg-white border border-slate-300 rounded-lg text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 font-sans"
-                  {...register("password")}
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword((prev) => !prev)}
-                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-1"
-                  aria-label={showPassword ? "Hide password" : "Show password"}
-                >
-                  {showPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
-                </button>
-              </div>
-              {errors.password && (
-                <p className="text-[11px] text-rose-600">{errors.password.message}</p>
-              )}
-            </div>
-
-            <button
-              type="submit"
-              disabled={isSubmitting}
-              className="w-full py-2.5 px-4 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-xs transition-colors cursor-pointer disabled:bg-slate-300 disabled:cursor-not-allowed"
+            <form
+              onSubmit={handleSubmit(onSubmit)}
+              className="space-y-4"
+              noValidate
             >
-              {isSubmitting ? "Logging in..." : "Login"}
-            </button>
-          </form>
-        </div>
+              {/* Email */}
+              <FormField
+                label="Email"
+                htmlFor="email"
+                required
+                error={errors.email?.message}
+              >
+                <Input
+                  id="email"
+                  type="email"
+                  placeholder="name@example.com"
+                  autoComplete="email"
+                  disabled={isSubmitting}
+                  className={errors.email ? "border-rose-400 focus-visible:ring-rose-400" : ""}
+                  {...register("email")}
+                />
+              </FormField>
+
+              {/* Password */}
+              <FormField
+                label="Password"
+                htmlFor="password"
+                required
+                error={errors.password?.message}
+              >
+                <div className="relative">
+                  <Input
+                    id="password"
+                    type={showPassword ? "text" : "password"}
+                    placeholder="••••••••"
+                    autoComplete="current-password"
+                    disabled={isSubmitting}
+                    className={
+                      errors.password
+                        ? "border-rose-400 focus-visible:ring-rose-400 pr-9"
+                        : "pr-9"
+                    }
+                    {...register("password")}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword((prev) => !prev)}
+                    tabIndex={-1}
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-1 rounded"
+                    aria-label={showPassword ? "Hide password" : "Show password"}
+                  >
+                    {showPassword ? (
+                      <EyeOff className="w-3.5 h-3.5" />
+                    ) : (
+                      <Eye className="w-3.5 h-3.5" />
+                    )}
+                  </button>
+                </div>
+              </FormField>
+
+              <Button
+                type="submit"
+                className="w-full"
+                size="lg"
+                disabled={isSubmitting}
+              >
+                {isSubmitting ? (
+                  <>
+                    <LoadingSpinner
+                      size="w-3.5 h-3.5"
+                      color="border-white/40 border-t-white"
+                    />
+                    Signing in…
+                  </>
+                ) : (
+                  "Sign in"
+                )}
+              </Button>
+            </form>
+          </CardContent>
+        </Card>
+
+        <p className="text-center text-[11px] text-slate-400">
+          Pharmacy Point of Sale System
+        </p>
       </div>
     </div>
   );

@@ -4,7 +4,7 @@ import React from "react";
 import { Sale } from "@/types";
 import { formatCurrency, formatDateTime } from "@/lib/utils";
 import { Printer, CheckCircle, ArrowRight, ShieldCheck } from "lucide-react";
-import { Modal } from "@/components/ui/Modal";
+import { Modal } from "@/components/shared/Modal";
 
 interface ReceiptModalProps {
   isOpen: boolean;

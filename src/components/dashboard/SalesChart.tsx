@@ -13,7 +13,7 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import { BarChart3, TrendingUp, ChevronLeft, ChevronRight } from "lucide-react";
-import { Skeleton } from "@/components/ui/Skeleton";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useSalesTrend } from "@/hooks/dashboard/useSalesTrend";
 import type { SalesTrend } from "@/types";
 

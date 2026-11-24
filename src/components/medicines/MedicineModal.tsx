@@ -4,7 +4,7 @@ import React, { useEffect } from "react";
 import { useForm, Resolver } from "react-hook-form";
 import * as z from "zod";
 import { Medicine, DosageForm } from "@/types";
-import { Modal } from "@/components/ui/Modal";
+import { Modal } from "@/components/shared/Modal";
 
 const dosageForms: DosageForm[] = [
   "Tablet",

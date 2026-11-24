@@ -4,7 +4,7 @@ import React from "react";
 import { Medicine } from "@/types";
 import { formatCurrency } from "@/lib/utils";
 import { getBatchAnalysis, formatExpiryDate } from "@/lib/expiryUtils";
-import { Modal } from "@/components/ui/Modal";
+import { Modal } from "@/components/shared/Modal";
 import { Pill, Building2, MapPin, Tag, CheckCircle2, XCircle, Package, AlertTriangle, Layers } from "lucide-react";
 
 interface MedicineDetailModalProps {

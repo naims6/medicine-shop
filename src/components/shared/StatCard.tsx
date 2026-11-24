@@ -1,3 +1,6 @@
+import React from "react";
+import { Card } from "@/components/ui/card";
+
 interface StatCardProps {
   label: string;
   value: number | string;
@@ -6,9 +9,9 @@ interface StatCardProps {
 
 export function StatCard({ label, value, color = "text-slate-900" }: StatCardProps) {
   return (
-    <div className="bg-white border border-slate-200 rounded-xl p-3 shadow-xs">
+    <Card className="p-3">
       <span className="text-[11px] font-medium text-slate-500">{label}</span>
       <div className={`text-lg font-bold mt-0.5 ${color}`}>{value}</div>
-    </div>
+    </Card>
   );
 }

@@ -1,6 +1,6 @@
 import React from "react";
 import Link from "next/link";
-import { Skeleton } from "@/components/ui/Skeleton";
+import { Skeleton } from "@/components/ui/skeleton";
 
 // ---- StatCard ----
 
