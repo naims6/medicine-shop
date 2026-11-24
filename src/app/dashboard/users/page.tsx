@@ -139,7 +139,7 @@ export default function UsersPage() {
   const updateMutation  = useUpdateUser();
   const deleteMutation  = useDeleteUser();
 
-  const users = data?.data ?? [];
+  const users = useMemo(() => data?.data ?? [], [data]);
   const meta  = data?.meta;
 
   const filtered = useMemo(() => {
