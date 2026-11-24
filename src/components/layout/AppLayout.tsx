@@ -19,7 +19,7 @@ function ProtectedAppContent({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     // Only dashboard routes require authentication
     if (!isLoading && !isAuthenticated && isDashboardRoute) {
-      router.replace("/login");
+      router.replace("/");
     }
   }, [isAuthenticated, isLoading, isDashboardRoute, router]);
 

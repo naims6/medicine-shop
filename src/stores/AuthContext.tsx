@@ -10,7 +10,7 @@ import { onSessionExpired } from "@/lib/apiClient";
 import type { AuthUser, LoginPayload } from "@/types";
 
 /** Routes where we must NOT call /auth/me (no session exists yet). */
-const PUBLIC_ROUTES = ["/login"];
+const PUBLIC_ROUTES = ["/"];
 
 interface AuthContextValue {
   user: AuthUser | null;
