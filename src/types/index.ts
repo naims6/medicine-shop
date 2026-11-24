@@ -28,7 +28,14 @@ export type {
   TrendPeriodMeta,
 } from "./dashboard.types";
 
-export type { UserRole, UserStatus, User } from "./user.types";
+export type {
+  UserRole,
+  UserStatus,
+  User,
+  CreateUserPayload,
+  UpdateUserPayload,
+  ChangePasswordPayload,
+} from "./user.types";
 
 export type { AuthRole, AuthStatus, AuthUser, LoginPayload } from "./auth.types";
 
