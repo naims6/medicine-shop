@@ -1,8 +1,7 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { Menu, Clock, LogOut } from "lucide-react";
+import { Menu, LogOut } from "lucide-react";
 import { useAuth } from "@/stores/AuthContext";
 
 function getInitials(name: string): string {
@@ -54,31 +53,6 @@ export function TopNav({ onToggleMobileSidebar }: TopNavProps) {
   const pathname = usePathname();
   const router = useRouter();
   const { user, logout } = useAuth();
-  const [currentDateTime, setCurrentDateTime] = useState<string>("");
-
-  useEffect(() => {
-    const updateTime = () => {
-      const now = new Date();
-      const formatted =
-        now.toLocaleDateString("en-GB", {
-          weekday: "short",
-          day: "numeric",
-          month: "short",
-          year: "numeric",
-        }) +
-        " • " +
-        now.toLocaleTimeString("en-US", {
-          hour: "2-digit",
-          minute: "2-digit",
-          hour12: true,
-        });
-      setCurrentDateTime(formatted);
-    };
-
-    updateTime();
-    const interval = setInterval(updateTime, 1000);
-    return () => clearInterval(interval);
-  }, []);
 
   const meta = titleMap[pathname] || {
     title: "Shodesh Pharmacy POS",
@@ -93,7 +67,7 @@ export function TopNav({ onToggleMobileSidebar }: TopNavProps) {
         // Best-effort: still leave the authenticated area even if the server
         // logout call fails (e.g. network). The session query revalidates.
       } finally {
-        router.replace("/login");
+        router.replace("/");
       }
     }
   };
@@ -123,14 +97,6 @@ export function TopNav({ onToggleMobileSidebar }: TopNavProps) {
       </div>
 
       <div className="flex items-center gap-2 sm:gap-3 shrink-0">
-        {/* Live Clock */}
-        <div className="hidden lg:flex items-center gap-2 text-xs text-slate-600 bg-slate-50 px-2.5 py-1.5 rounded-lg border border-slate-200">
-          <Clock className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-          <span className="font-medium font-mono">
-            {currentDateTime || "Loading..."}
-          </span>
-        </div>
-
         <div className="h-5 w-px bg-slate-200" />
 
         {/* Admin / User Profile */}

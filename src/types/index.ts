@@ -19,7 +19,14 @@ export type {
   Return,
 } from "./sale.types";
 
-export type { DashboardMetrics } from "./dashboard.types";
+export type {
+  DashboardMetrics,
+  DashboardSummary,
+  SalesTrend,
+  SalesTrendQuery,
+  TrendPoint,
+  TrendPeriodMeta,
+} from "./dashboard.types";
 
 export type { UserRole, UserStatus, User } from "./user.types";
 
