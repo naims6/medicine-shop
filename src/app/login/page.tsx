@@ -3,38 +3,11 @@
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useForm, Resolver } from "react-hook-form";
-import * as z from "zod";
+import { useForm } from "react-hook-form";
 import { useAuth } from "@/stores/AuthContext";
 import { isApiError } from "@/lib/apiErrors";
+import { loginResolver, type LoginFormData } from "@/schemas/auth.schema";
 import { Store, Eye, EyeOff, AlertCircle } from "lucide-react";
-
-const loginSchema = z.object({
-  email: z.string().min(1, "Email is required").email("Enter a valid email"),
-  password: z.string().min(1, "Password is required"),
-});
-
-type LoginFormData = z.infer<typeof loginSchema>;
-
-// Manual zod resolver — mirrors the pattern used elsewhere in the codebase
-// (MedicineModal) so the form layer stays consistent without a resolver dep.
-const loginResolver: Resolver<LoginFormData> = async (values) => {
-  const result = loginSchema.safeParse(values);
-  if (result.success) {
-    return { values: result.data, errors: {} };
-  }
-  const errors: Record<string, { type: string; message: string }> = {};
-  for (const issue of result.error.issues) {
-    const field = String(issue.path[0] ?? "");
-    if (field && !errors[field]) {
-      errors[field] = { type: issue.code, message: issue.message };
-    }
-  }
-  return {
-    values: {},
-    errors: errors as unknown as Record<string, { type: string; message: string }>,
-  };
-};
 
 export default function LoginPage() {
   const router = useRouter();
