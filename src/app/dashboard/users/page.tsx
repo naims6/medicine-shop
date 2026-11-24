@@ -14,186 +14,63 @@ import {
   ChevronRight,
 } from "lucide-react";
 import { useAuth } from "@/stores/AuthContext";
-import {
-  useUsers,
-  useUpdateUser,
-  useDeleteUser,
-} from "@/hooks/users";
+import { useUsers, useUpdateUser, useDeleteUser } from "@/hooks/users";
 import { UserModal, ChangePasswordModal } from "@/components/users/UserModal";
+import { StatCard } from "@/components/ui/StatCard";
+import { TableSkeleton } from "@/components/ui/TableSkeleton";
+import { DeleteConfirmModal } from "@/components/ui/DeleteConfirmModal";
 import type { User } from "@/types";
 import { isApiError } from "@/lib/apiErrors";
-
-// ---------------------------------------------------------------------------
-// Stat card
-// ---------------------------------------------------------------------------
-
-function StatCard({
-  label,
-  value,
-  color = "text-slate-900",
-}: {
-  label: string;
-  value: number | string;
-  color?: string;
-}) {
-  return (
-    <div className="bg-white border border-slate-200 rounded-xl p-3 shadow-xs">
-      <span className="text-[11px] font-medium text-slate-500">{label}</span>
-      <div className={`text-lg font-bold mt-0.5 ${color}`}>{value}</div>
-    </div>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Skeleton rows
-// ---------------------------------------------------------------------------
-
-function TableSkeleton() {
-  return (
-    <>
-      {Array.from({ length: 6 }).map((_, i) => (
-        <tr key={i} className="border-b border-slate-100 last:border-0">
-          {Array.from({ length: 6 }).map((__, j) => (
-            <td key={j} className="py-2.5 px-4">
-              <div className="h-3 rounded bg-slate-100 animate-pulse" />
-            </td>
-          ))}
-        </tr>
-      ))}
-    </>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Delete confirmation modal
-// ---------------------------------------------------------------------------
-
-function DeleteConfirmModal({
-  user,
-  onCancel,
-  onConfirm,
-  isDeleting,
-}: {
-  user: User;
-  onCancel: () => void;
-  onConfirm: () => void;
-  isDeleting: boolean;
-}) {
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div
-        className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs"
-        onClick={onCancel}
-      />
-      <div className="relative z-10 w-full max-w-sm bg-white rounded-xl shadow-xl border border-slate-200 p-5 space-y-3">
-        <h4 className="font-bold text-slate-900 text-sm">Delete User</h4>
-        <p className="text-xs text-slate-600">
-          Delete <strong>{user.name}</strong>?{" "}
-          <span className="text-slate-500">({user.email})</span> This is a soft
-          delete — the account will be deactivated but data is preserved.
-        </p>
-        <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
-          <button
-            type="button"
-            onClick={onCancel}
-            disabled={isDeleting}
-            className="px-3 py-1.5 border border-slate-200 text-slate-600 rounded-lg text-xs font-medium hover:bg-slate-50 disabled:opacity-50 cursor-pointer"
-          >
-            Cancel
-          </button>
-          <button
-            type="button"
-            onClick={onConfirm}
-            disabled={isDeleting}
-            className="px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-lg text-xs font-semibold disabled:opacity-60 cursor-pointer flex items-center gap-1.5"
-          >
-            {isDeleting ? (
-              <>
-                <span className="w-3 h-3 border-2 border-white/40 border-t-white rounded-full animate-spin" />
-                Deleting…
-              </>
-            ) : (
-              "Delete"
-            )}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Page
-// ---------------------------------------------------------------------------
 
 const PAGE_SIZE = 10;
 
 export default function UsersPage() {
   const { user: currentUser } = useAuth();
 
-  // ---- Pagination & filters (client-side filtering on current page data)
   const [page, setPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState("");
   const [roleFilter, setRoleFilter] = useState("ALL");
   const [statusFilter, setStatusFilter] = useState("ALL");
 
-  // ---- Modal state
   const [isUserModalOpen, setIsUserModalOpen] = useState(false);
   const [userToEdit, setUserToEdit] = useState<User | null>(null);
   const [userToDelete, setUserToDelete] = useState<User | null>(null);
   const [userToChangePassword, setUserToChangePassword] = useState<User | null>(null);
-
-  // ---- Error banner for quick-actions (toggle status)
   const [actionError, setActionError] = useState("");
 
-  // ---- Data
   const { data, isLoading, isFetching } = useUsers({ page, limit: PAGE_SIZE });
   const updateMutation = useUpdateUser();
   const deleteMutation = useDeleteUser();
 
-  const users = data?.data ?? [];
+  // Stable array — prevents the filteredUsers/metrics useMemos from re-running
+  // on every render when data?.data produces a new [] reference each time.
+  const users = useMemo(() => data?.data ?? [], [data]);
   const meta = data?.meta;
 
-  // Client-side filter within the current page
   const filteredUsers = useMemo(() => {
+    const q = searchTerm.toLowerCase().trim();
     return users.filter((u) => {
-      const q = searchTerm.toLowerCase().trim();
       const matchSearch =
         !q ||
         u.name.toLowerCase().includes(q) ||
         u.email.toLowerCase().includes(q) ||
         (u.phone?.toLowerCase().includes(q) ?? false);
-
       const matchRole = roleFilter === "ALL" || u.role === roleFilter;
       const matchStatus = statusFilter === "ALL" || u.status === statusFilter;
-
       return matchSearch && matchRole && matchStatus;
     });
   }, [users, searchTerm, roleFilter, statusFilter]);
 
-  // ---- Derived metrics from current page data
-  const metrics = useMemo(() => {
-    const all = data?.data ?? [];
-    return {
-      total: meta?.total ?? 0,
-      active: all.filter((u) => u.status === "Active").length,
-      inactive: all.filter((u) => u.status === "Inactive").length,
-      admins: all.filter((u) => u.role === "Admin").length,
-      salesmen: all.filter((u) => u.role === "Salesman").length,
-    };
-  }, [data, meta]);
+  const metrics = useMemo(() => ({
+    total: meta?.total ?? 0,
+    active: users.filter((u) => u.status === "Active").length,
+    inactive: users.filter((u) => u.status === "Inactive").length,
+    admins: users.filter((u) => u.role === "Admin").length,
+    salesmen: users.filter((u) => u.role === "Salesman").length,
+  }), [users, meta]);
 
-  // ---- Handlers
-
-  const openCreate = () => {
-    setUserToEdit(null);
-    setIsUserModalOpen(true);
-  };
-
-  const openEdit = (u: User) => {
-    setUserToEdit(u);
-    setIsUserModalOpen(true);
-  };
+  const openCreate = () => { setUserToEdit(null); setIsUserModalOpen(true); };
+  const openEdit = (u: User) => { setUserToEdit(u); setIsUserModalOpen(true); };
 
   const handleToggleStatus = async (u: User) => {
     setActionError("");
@@ -222,7 +99,8 @@ export default function UsersPage() {
 
   return (
     <div className="space-y-5 max-w-6xl">
-      {/* ---- Header ---- */}
+
+      {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <h2 className="text-xl font-bold text-slate-900 tracking-tight flex items-center gap-2">
@@ -233,7 +111,6 @@ export default function UsersPage() {
             Manage pharmacy salesmen and admin accounts.
           </p>
         </div>
-
         <button
           onClick={openCreate}
           className="self-start sm:self-auto px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-semibold shadow-xs flex items-center gap-1.5 transition-colors cursor-pointer"
@@ -243,18 +120,18 @@ export default function UsersPage() {
         </button>
       </div>
 
-      {/* ---- Metrics ---- */}
+      {/* Metrics */}
       <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
-        <StatCard label="Total Users" value={metrics.total} />
-        <StatCard label="Active" value={metrics.active} color="text-emerald-600" />
-        <StatCard label="Inactive" value={metrics.inactive} color="text-slate-500" />
-        <StatCard label="Admins" value={metrics.admins} color="text-purple-600" />
+        <StatCard label="Total Users"  value={metrics.total}    />
+        <StatCard label="Active"       value={metrics.active}   color="text-emerald-600" />
+        <StatCard label="Inactive"     value={metrics.inactive} color="text-slate-500" />
+        <StatCard label="Admins"       value={metrics.admins}   color="text-purple-600" />
         <div className="col-span-2 sm:col-span-1">
-          <StatCard label="Salesmen" value={metrics.salesmen} color="text-sky-600" />
+          <StatCard label="Salesmen"   value={metrics.salesmen} color="text-sky-600" />
         </div>
       </div>
 
-      {/* ---- Action error ---- */}
+      {/* Action error */}
       {actionError && (
         <div className="p-2.5 rounded-lg bg-rose-50 border border-rose-200 text-rose-700 text-xs flex items-center gap-2">
           <span>{actionError}</span>
@@ -268,7 +145,7 @@ export default function UsersPage() {
         </div>
       )}
 
-      {/* ---- Filters ---- */}
+      {/* Filters */}
       <div className="bg-white border border-slate-200 rounded-xl p-3 shadow-xs flex flex-col sm:flex-row gap-3 items-stretch sm:items-center justify-between">
         <div className="relative flex-1">
           <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
@@ -276,23 +153,16 @@ export default function UsersPage() {
             type="text"
             placeholder="Search by name, email, or phone…"
             value={searchTerm}
-            onChange={(e) => {
-              setSearchTerm(e.target.value);
-              setPage(1);
-            }}
+            onChange={(e) => { setSearchTerm(e.target.value); setPage(1); }}
             className="w-full pl-9 pr-4 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500"
           />
         </div>
-
         <div className="flex items-center gap-2">
           <div className="flex items-center gap-1.5">
             <Filter className="w-3.5 h-3.5 text-slate-400" />
             <select
               value={roleFilter}
-              onChange={(e) => {
-                setRoleFilter(e.target.value);
-                setPage(1);
-              }}
+              onChange={(e) => { setRoleFilter(e.target.value); setPage(1); }}
               className="px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-emerald-500"
             >
               <option value="ALL">All Roles</option>
@@ -300,13 +170,9 @@ export default function UsersPage() {
               <option value="Salesman">Salesman</option>
             </select>
           </div>
-
           <select
             value={statusFilter}
-            onChange={(e) => {
-              setStatusFilter(e.target.value);
-              setPage(1);
-            }}
+            onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }}
             className="px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-emerald-500"
           >
             <option value="ALL">All Status</option>
@@ -316,13 +182,11 @@ export default function UsersPage() {
         </div>
       </div>
 
-      {/* ---- Table ---- */}
+      {/* Table */}
       <div className="bg-white border border-slate-200 rounded-xl shadow-xs overflow-hidden">
-        {/* Thin loading bar at top while refetching */}
         {isFetching && !isLoaderVisible && (
           <div className="h-0.5 bg-emerald-500 animate-pulse" />
         )}
-
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs border-collapse">
             <thead>
@@ -337,13 +201,10 @@ export default function UsersPage() {
             </thead>
             <tbody className="divide-y divide-slate-100">
               {isLoaderVisible ? (
-                <TableSkeleton />
+                <TableSkeleton rows={6} cols={6} />
               ) : filteredUsers.length === 0 ? (
                 <tr>
-                  <td
-                    colSpan={6}
-                    className="py-10 text-center text-xs text-slate-400"
-                  >
+                  <td colSpan={6} className="py-10 text-center text-xs text-slate-400">
                     {searchTerm || roleFilter !== "ALL" || statusFilter !== "ALL"
                       ? "No users match the current filters."
                       : "No users found."}
@@ -354,12 +215,10 @@ export default function UsersPage() {
                   const isActive = u.status === "Active";
                   const isCurrent = u.id === currentUser?.id;
                   const isTogglingStatus =
-                    updateMutation.isPending &&
-                    updateMutation.variables?.id === u.id;
+                    updateMutation.isPending && updateMutation.variables?.id === u.id;
 
                   return (
                     <tr key={u.id} className="hover:bg-slate-50/50">
-                      {/* Name / email */}
                       <td className="py-2.5 px-4">
                         <div className="font-semibold text-slate-900 flex items-center gap-1.5">
                           {u.name}
@@ -372,30 +231,22 @@ export default function UsersPage() {
                         <div className="text-slate-400 text-[11px]">{u.email}</div>
                       </td>
 
-                      {/* Role */}
                       <td className="py-2.5 px-4">
-                        <span
-                          className={`inline-block px-2 py-0.5 rounded text-[11px] font-semibold ${
-                            u.role === "Admin"
-                              ? "bg-purple-50 text-purple-700 border border-purple-200"
-                              : "bg-sky-50 text-sky-700 border border-sky-200"
-                          }`}
-                        >
+                        <span className={`inline-block px-2 py-0.5 rounded text-[11px] font-semibold ${
+                          u.role === "Admin"
+                            ? "bg-purple-50 text-purple-700 border border-purple-200"
+                            : "bg-sky-50 text-sky-700 border border-sky-200"
+                        }`}>
                           {u.role}
                         </span>
                       </td>
 
-                      {/* Status toggle */}
                       <td className="py-2.5 px-4">
                         <button
                           type="button"
                           onClick={() => handleToggleStatus(u)}
                           disabled={isTogglingStatus || isCurrent}
-                          title={
-                            isCurrent
-                              ? "Cannot change your own status"
-                              : "Click to toggle"
-                          }
+                          title={isCurrent ? "Cannot change your own status" : "Click to toggle"}
                           className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[11px] font-medium transition-colors disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer ${
                             isActive
                               ? "bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100"
@@ -405,17 +256,12 @@ export default function UsersPage() {
                           {isTogglingStatus ? (
                             <span className="w-2.5 h-2.5 border border-current border-t-transparent rounded-full animate-spin" />
                           ) : (
-                            <span
-                              className={`w-1.5 h-1.5 rounded-full ${
-                                isActive ? "bg-emerald-600" : "bg-slate-400"
-                              }`}
-                            />
+                            <span className={`w-1.5 h-1.5 rounded-full ${isActive ? "bg-emerald-600" : "bg-slate-400"}`} />
                           )}
                           {isActive ? "Active" : "Inactive"}
                         </button>
                       </td>
 
-                      {/* Phone */}
                       <td className="py-2.5 px-4 text-slate-600">
                         {u.phone ? (
                           <div className="flex items-center gap-1">
@@ -427,12 +273,10 @@ export default function UsersPage() {
                         )}
                       </td>
 
-                      {/* Created at */}
                       <td className="py-2.5 px-4 text-slate-500 text-[11px]">
                         {new Date(u.createdAt).toLocaleDateString("en-GB")}
                       </td>
 
-                      {/* Actions */}
                       <td className="py-2.5 px-4 text-right">
                         <div className="flex items-center justify-end gap-0.5">
                           <button
@@ -452,11 +296,7 @@ export default function UsersPage() {
                           <button
                             onClick={() => setUserToDelete(u)}
                             disabled={isCurrent}
-                            title={
-                              isCurrent
-                                ? "Cannot delete your own account"
-                                : "Delete user"
-                            }
+                            title={isCurrent ? "Cannot delete your own account" : "Delete user"}
                             className="p-1.5 rounded hover:bg-rose-50 text-slate-400 hover:text-rose-600 cursor-pointer transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
                           >
                             <Trash2 className="w-3.5 h-3.5" />
@@ -471,13 +311,12 @@ export default function UsersPage() {
           </table>
         </div>
 
-        {/* ---- Pagination ---- */}
+        {/* Pagination */}
         {meta && meta.totalPages > 1 && (
           <div className="px-4 py-3 border-t border-slate-100 flex items-center justify-between gap-3">
             <span className="text-[11px] text-slate-500">
               Page {meta.page} of {meta.totalPages} &middot; {meta.total} users
             </span>
-
             <div className="flex items-center gap-1">
               <button
                 onClick={() => setPage((p) => Math.max(1, p - 1))}
@@ -487,26 +326,16 @@ export default function UsersPage() {
                 <ChevronLeft className="w-3.5 h-3.5" />
               </button>
 
-              {/* Page numbers — show up to 5 */}
               {Array.from({ length: meta.totalPages }, (_, i) => i + 1)
-                .filter(
-                  (p) =>
-                    p === 1 ||
-                    p === meta.totalPages ||
-                    Math.abs(p - page) <= 1,
-                )
+                .filter((p) => p === 1 || p === meta.totalPages || Math.abs(p - page) <= 1)
                 .reduce<(number | "...")[]>((acc, p, idx, arr) => {
-                  if (idx > 0 && p - (arr[idx - 1] as number) > 1) {
-                    acc.push("...");
-                  }
+                  if (idx > 0 && p - (arr[idx - 1] as number) > 1) acc.push("...");
                   acc.push(p);
                   return acc;
                 }, [])
                 .map((item, idx) =>
                   item === "..." ? (
-                    <span key={`ellipsis-${idx}`} className="px-1 text-slate-400 text-xs">
-                      …
-                    </span>
+                    <span key={`ellipsis-${idx}`} className="px-1 text-slate-400 text-xs">…</span>
                   ) : (
                     <button
                       key={item}
@@ -520,7 +349,7 @@ export default function UsersPage() {
                     >
                       {item}
                     </button>
-                  ),
+                  )
                 )}
 
               <button
@@ -535,8 +364,7 @@ export default function UsersPage() {
         )}
       </div>
 
-      {/* ---- Modals ---- */}
-
+      {/* Modals */}
       <UserModal
         isOpen={isUserModalOpen}
         onClose={() => setIsUserModalOpen(false)}
@@ -553,7 +381,15 @@ export default function UsersPage() {
 
       {userToDelete && (
         <DeleteConfirmModal
-          user={userToDelete}
+          title="Delete User"
+          description={
+            <p>
+              Delete <strong>{userToDelete.name}</strong>?{" "}
+              <span className="text-slate-500">({userToDelete.email})</span> This
+              is a soft delete — the account will be deactivated but data is
+              preserved.
+            </p>
+          }
           onCancel={() => setUserToDelete(null)}
           onConfirm={handleDeleteConfirm}
           isDeleting={deleteMutation.isPending}
