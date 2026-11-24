@@ -14,6 +14,7 @@ import {
   CircleDollarSign,
 } from "lucide-react";
 
+import { AdminOnly } from "@/components/shared/AdminOnly";
 import { useDashboardSummary } from "@/hooks/dashboard/useDashboardSummary";
 import { useSalesTrend } from "@/hooks/dashboard/useSalesTrend";
 import { SalesChart } from "@/components/dashboard/SalesChart";
@@ -189,6 +190,7 @@ export default function DashboardPage() {
   ];
 
   return (
+    <AdminOnly>
     <div className="space-y-5 pb-6">
 
       {/* ── Page header ── */}
@@ -354,5 +356,6 @@ export default function DashboardPage() {
         ))}
       </div>
     </div>
+    </AdminOnly>
   );
 }

@@ -6,6 +6,7 @@ import { Users, UserPlus, Search, Filter, Edit2, Trash2, Phone, KeyRound, AlertC
 import { useAuth } from "@/stores/AuthContext";
 import { useUsers, useUpdateUser, useDeleteUser } from "@/hooks/users";
 import { UserModal, ChangePasswordModal } from "@/components/users/UserModal";
+import { AdminOnly } from "@/components/shared/AdminOnly";
 import { DeleteConfirmModal } from "@/components/shared/DeleteConfirmModal";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { Pagination } from "@/components/shared/Pagination";
@@ -183,6 +184,7 @@ export default function UsersPage() {
   };
 
   return (
+    <AdminOnly>
     <div className="space-y-5 max-w-6xl">
 
       <PageHeader
@@ -286,5 +288,6 @@ export default function UsersPage() {
         />
       )}
     </div>
+    </AdminOnly>
   );
 }

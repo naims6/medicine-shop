@@ -14,6 +14,7 @@ import {
   ChevronRight,
 } from "lucide-react";
 import { useCart } from "@/stores/CartContext";
+import { useAuth } from "@/stores/AuthContext";
 
 const navItems = [
   {
@@ -21,36 +22,42 @@ const navItems = [
     href: "/dashboard",
     icon: LayoutDashboard,
     badge: null,
+    adminOnly: true,
   },
   {
     name: "New Sale (POS)",
     href: "/dashboard/pos",
     icon: ShoppingCart,
     isPOS: true,
+    adminOnly: false,
   },
   {
     name: "Medicines",
     href: "/dashboard/medicines",
     icon: Pill,
     badge: null,
+    adminOnly: false,
   },
   {
     name: "Sales History",
     href: "/dashboard/sales",
     icon: History,
     badge: null,
+    adminOnly: false,
   },
   {
     name: "Returns",
     href: "/dashboard/returns",
     icon: RotateCcw,
     badge: null,
+    adminOnly: false,
   },
   {
     name: "User Management",
     href: "/dashboard/users",
     icon: Users,
     badge: null,
+    adminOnly: true,
   },
 ];
 
@@ -63,8 +70,12 @@ const emptySubscribe = () => () => {};
 export function Sidebar({ onCloseMobile }: SidebarProps) {
   const pathname = usePathname();
   const { totalQuantity } = useCart();
+  const { user } = useAuth();
   const mounted = useSyncExternalStore(emptySubscribe, () => true, () => false);
   const cartCount = mounted ? totalQuantity : 0;
+
+  const isAdmin = user?.role === "Admin";
+  const visibleNavItems = navItems.filter((item) => !item.adminOnly || isAdmin);
 
   return (
     <aside className="w-64 bg-white border-r border-slate-200 flex flex-col h-full shrink-0 select-none">
@@ -117,7 +128,7 @@ export function Sidebar({ onCloseMobile }: SidebarProps) {
         <div className="px-3 pt-2 pb-1 text-[11px] font-semibold tracking-wider text-slate-400 uppercase">
           Menu
         </div>
-        {navItems.map((item) => {
+        {visibleNavItems.map((item) => {
           const isActive = pathname === item.href;
           const Icon = item.icon;
 
