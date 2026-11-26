@@ -18,7 +18,7 @@ import {
 import { AdminOnly } from "@/components/shared/AdminOnly";
 import { useDashboardSummary } from "@/hooks/dashboard/useDashboardSummary";
 import { useSalesTrend } from "@/hooks/dashboard/useSalesTrend";
-import { SalesChart } from "@/components/dashboard/SalesChart";
+import { SalesChart, type ChartViewMode } from "@/components/dashboard/SalesChart";
 import { StatCard, StatsSkeleton } from "@/components/dashboard/StatCard";
 import {
   Card,
@@ -117,7 +117,7 @@ function QuickLinkCard({ href, icon, label, sub, color, iconBg }: QuickLinkItem)
 // Dashboard page
 // ---------------------------------------------------------------------------
 export default function DashboardPage() {
-  const [chartView, setChartView] = useState<"weekly" | "monthly">("weekly");
+  const [chartView, setChartView] = useState<ChartViewMode>("weekly");
 
   const summary = useDashboardSummary();
   const trendDay = useSalesTrend({
@@ -303,7 +303,13 @@ export default function DashboardPage() {
           <SalesChart
             trendDay={trendDay.data ?? null}
             trendMonth={trendMonth.data ?? null}
-            isLoading={chartView === "weekly" ? trendDay.isLoading : trendMonth.isLoading}
+            isLoading={
+              chartView === "weekly"
+                ? trendDay.isLoading
+                : chartView === "monthly"
+                ? trendMonth.isLoading
+                : false
+            }
             viewMode={chartView}
             onViewModeChange={setChartView}
           />
