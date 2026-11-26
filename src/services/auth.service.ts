@@ -7,7 +7,6 @@ interface MeResponse {
 
 interface LoginResponse {
   user: AuthUser;
-  accessToken: string;
 }
 
 export const authService = {

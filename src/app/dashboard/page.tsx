@@ -1,5 +1,6 @@
 "use client";
 
+import React, { useState } from "react";
 import Link from "next/link";
 import {
   ArrowRight,
@@ -116,9 +117,19 @@ function QuickLinkCard({ href, icon, label, sub, color, iconBg }: QuickLinkItem)
 // Dashboard page
 // ---------------------------------------------------------------------------
 export default function DashboardPage() {
+  const [chartView, setChartView] = useState<"weekly" | "monthly">("weekly");
+
   const summary = useDashboardSummary();
-  const trendDay = useSalesTrend({ interval: "day", limit: 7 });
-  const trendMonth = useSalesTrend({ interval: "month", limit: 12 });
+  const trendDay = useSalesTrend({
+    interval: "day",
+    limit: 7,
+    enabled: chartView === "weekly",
+  });
+  const trendMonth = useSalesTrend({
+    interval: "month",
+    limit: 12,
+    enabled: chartView === "monthly",
+  });
 
   const s = summary.data;
   const isLoading = summary.isLoading;
@@ -292,7 +303,9 @@ export default function DashboardPage() {
           <SalesChart
             trendDay={trendDay.data ?? null}
             trendMonth={trendMonth.data ?? null}
-            isLoading={trendDay.isLoading || trendMonth.isLoading}
+            isLoading={chartView === "weekly" ? trendDay.isLoading : trendMonth.isLoading}
+            viewMode={chartView}
+            onViewModeChange={setChartView}
           />
         </div>
 

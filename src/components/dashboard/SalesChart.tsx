@@ -31,10 +31,11 @@ interface SalesChartProps {
   trendDay: SalesTrend | null;
   trendMonth: SalesTrend | null;
   isLoading?: boolean;
+  viewMode: "weekly" | "monthly";
+  onViewModeChange: (mode: "weekly" | "monthly") => void;
 }
 
-export function SalesChart({ trendDay, trendMonth, isLoading }: SalesChartProps) {
-  const [viewMode, setViewMode] = useState<"weekly" | "monthly">("weekly");
+export function SalesChart({ trendDay, trendMonth, isLoading, viewMode, onViewModeChange }: SalesChartProps) {
   const [chartType, setChartType] = useState<"area" | "bar">("area");
 
   // Page state for navigating backward through history
@@ -99,7 +100,7 @@ export function SalesChart({ trendDay, trendMonth, isLoading }: SalesChartProps)
           {/* Timeframe toggle */}
           <div className="bg-slate-100 p-0.5 rounded-lg flex items-center text-xs font-semibold">
             <button
-              onClick={() => setViewMode("weekly")}
+              onClick={() => onViewModeChange("weekly")}
               className={`px-2.5 py-1 rounded-md transition-all cursor-pointer ${
                 viewMode === "weekly"
                   ? "bg-white text-slate-900 shadow-2xs"
@@ -109,7 +110,7 @@ export function SalesChart({ trendDay, trendMonth, isLoading }: SalesChartProps)
               7 Days
             </button>
             <button
-              onClick={() => setViewMode("monthly")}
+              onClick={() => onViewModeChange("monthly")}
               className={`px-2.5 py-1 rounded-md transition-all cursor-pointer ${
                 viewMode === "monthly"
                   ? "bg-white text-slate-900 shadow-2xs"
