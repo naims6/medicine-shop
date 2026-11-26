@@ -67,7 +67,7 @@ function ProtectedAppContent({ children }: { children: React.ReactNode }) {
             onToggleMobileSidebar={() => setMobileSidebarOpen((prev) => !prev)}
           />
           <main className="flex-1 overflow-y-auto bg-slate-50/70 p-2 sm:p-4 md:p-6">
-            <div className="max-w-7xl mx-auto h-full flex flex-col">
+            <div className="w-full h-full flex flex-col">
               {isLoading ? (
                 <div className="flex-1 flex flex-col items-center justify-center py-24 gap-2">
                   <div className="w-6 h-6 border-2 border-emerald-600 border-t-transparent rounded-full animate-spin" />

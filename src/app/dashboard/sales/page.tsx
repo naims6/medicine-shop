@@ -1,13 +1,15 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
-import { Sale, PaymentMethod, Return } from "@/types";
-import { salesRepository } from "@/repositories/salesRepository";
+import { useState, useCallback } from "react";
+import type { Sale, PaymentMethod } from "@/types";
+import { useSales } from "@/hooks/sales/useSales";
+import { salesService } from "@/services/sales.service";
 import { formatCurrency, formatDateTime } from "@/lib/utils";
+import { DateRangePicker } from "@/components/shared/DateRangePicker";
+import type { DateRange } from "@/components/shared/DateRangePicker";
 import {
   Search,
   Filter,
-  Calendar,
   Printer,
   Eye,
   FileText,
@@ -20,242 +22,159 @@ import {
   RotateCcw,
   HandCoins,
   User,
+  Loader2,
 } from "lucide-react";
 import { ReceiptModal } from "@/components/pos/ReceiptModal";
 import { ReturnModal } from "@/components/returns/ReturnModal";
 import { ReturnReceiptModal } from "@/components/returns/ReturnReceiptModal";
 import { CollectDueModal } from "@/components/pos/CollectDueModal";
+import { useQueryClient } from "@tanstack/react-query";
 
-const paymentMethods: (PaymentMethod | "All")[] = [
-  "All",
-  "Cash",
-  "Owing",
-];
+const PAYMENT_METHODS: (PaymentMethod | "All")[] = ["All", "Cash", "Owing"];
+const ITEMS_PER_PAGE = 15;
 
-const ITEMS_PER_PAGE = 8;
+// ─── helpers ────────────────────────────────────────────────────────────────
+
+function getPaymentBadge(method: PaymentMethod) {
+  if (method === "Cash")
+    return (
+      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+        <Banknote className="w-3 h-3" /> Cash
+      </span>
+    );
+  if (method === "Owing")
+    return (
+      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-50 text-amber-700 border border-amber-200">
+        <CircleDollarSign className="w-3 h-3" /> Owing
+      </span>
+    );
+  return (
+    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-slate-100 text-slate-700 border border-slate-200">
+      <Banknote className="w-3 h-3" /> {method}
+    </span>
+  );
+}
+
+// ─── Page ───────────────────────────────────────────────────────────────────
 
 export default function SalesHistoryPage() {
-  const [sales, setSales] = useState<Sale[]>([]);
+  // ── Filter state ──────────────────────────────────────────────────────────
   const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [selectedPayment, setSelectedPayment] = useState<PaymentMethod | "All">(
     "All",
   );
-  const [startDate, setStartDate] = useState("");
-  const [endDate, setEndDate] = useState("");
-  const [currentPage, setCurrentPage] = useState(1);
+  const [dateRange, setDateRange] = useState<DateRange>({
+    startDate: "",
+    endDate: "",
+  });
+  const [page, setPage] = useState(1);
+
+  // ── Modal state ───────────────────────────────────────────────────────────
   const [selectedSale, setSelectedSale] = useState<Sale | null>(null);
   const [isReceiptOpen, setIsReceiptOpen] = useState(false);
   const [returnTargetSale, setReturnTargetSale] = useState<Sale | null>(null);
   const [isReturnModalOpen, setIsReturnModalOpen] = useState(false);
-  const [completedReturn, setCompletedReturn] = useState<Return | null>(null);
+  const [completedReturn, setCompletedReturn] = useState<
+    import("@/types").Return | null
+  >(null);
   const [isReturnReceiptOpen, setIsReturnReceiptOpen] = useState(false);
-  const [collectDueTargetSale, setCollectDueTargetSale] = useState<Sale | null>(null);
+  const [collectDueTargetSale, setCollectDueTargetSale] = useState<Sale | null>(
+    null,
+  );
   const [isCollectDueOpen, setIsCollectDueOpen] = useState(false);
 
-  useEffect(() => {
-    let isMounted = true;
-    salesRepository.getAll().then((all) => {
-      if (isMounted) {
-        setSales(all);
-      }
-    });
-    return () => {
-      isMounted = false;
-    };
-  }, []);
+  const queryClient = useQueryClient();
 
-  // Filtered sales
-  const filteredSales = useMemo(() => {
-    const q = searchQuery.toLowerCase().trim();
+  // ── Debounce search ───────────────────────────────────────────────────────
+  const [searchTimer, setSearchTimer] = useState<ReturnType<
+    typeof setTimeout
+  > | null>(null);
 
-    return sales.filter((s) => {
-      if (selectedPayment !== "All" && s.paymentMethod !== selectedPayment) {
-        return false;
-      }
-      if (startDate) {
-        const sTime = new Date(s.createdAt).setHours(0, 0, 0, 0);
-        const start = new Date(startDate).setHours(0, 0, 0, 0);
-        if (sTime < start) return false;
-      }
-      if (endDate) {
-        const sTime = new Date(s.createdAt).setHours(23, 59, 59, 999);
-        const end = new Date(endDate).setHours(23, 59, 59, 999);
-        if (sTime > end) return false;
-      }
-      if (!q) return true;
+  const handleSearchChange = useCallback(
+    (v: string) => {
+      setSearchQuery(v);
+      if (searchTimer) clearTimeout(searchTimer);
+      const t = setTimeout(() => {
+        setDebouncedSearch(v);
+        setPage(1);
+      }, 350);
+      setSearchTimer(t);
+    },
+    [searchTimer],
+  );
 
-      return (
-        s.invoiceNumber.toLowerCase().includes(q) ||
-        s.cashierName.toLowerCase().includes(q) ||
-        (s.customerName && s.customerName.toLowerCase().includes(q)) ||
-        (s.customerPhone && s.customerPhone.toLowerCase().includes(q)) ||
-        s.items.some(
-          (item) =>
-            item.name.toLowerCase().includes(q) ||
-            item.genericName.toLowerCase().includes(q),
-        )
-      );
-    });
-  }, [sales, searchQuery, selectedPayment, startDate, endDate]);
+  // ── API query ─────────────────────────────────────────────────────────────
+  const { data, isLoading, isFetching } = useSales({
+    page,
+    limit: ITEMS_PER_PAGE,
+    query: debouncedSearch || undefined,
+    paymentMethod: selectedPayment !== "All" ? selectedPayment : undefined,
+    startDate: dateRange.startDate || undefined,
+    endDate: dateRange.endDate || undefined,
+  });
 
-  const totalPages = Math.ceil(filteredSales.length / ITEMS_PER_PAGE) || 1;
-  const paginatedSales = useMemo(() => {
-    const start = (currentPage - 1) * ITEMS_PER_PAGE;
-    return filteredSales.slice(start, start + ITEMS_PER_PAGE);
-  }, [filteredSales, currentPage]);
+  const sales = data?.data ?? [];
+  const meta = data?.meta;
+  const totalPages = meta?.totalPages ?? 1;
+  const totalCount = meta?.total ?? 0;
 
-  const totalFilteredRevenue = useMemo(() => {
-    return filteredSales.reduce((acc, s) => acc + s.totalAmount, 0);
-  }, [filteredSales]);
-
-  const totalFilteredOwing = useMemo(() => {
-    return filteredSales.reduce((acc, s) => {
-      const due =
-        typeof s.dueAmount === "number"
-          ? s.dueAmount
-          : s.paymentMethod === "Owing"
-          ? Math.max(0, s.totalAmount - (s.amountReceived || 0))
-          : 0;
-      return acc + due;
-    }, 0);
-  }, [filteredSales]);
-
-  const handleOpenReceipt = (sale: Sale) => {
-    setSelectedSale(sale);
-    setIsReceiptOpen(true);
+  // ── Date range change ─────────────────────────────────────────────────────
+  const handleDateRangeChange = (range: DateRange) => {
+    setDateRange(range);
+    setPage(1);
   };
 
-  const handleOpenCollectDue = (sale: Sale) => {
-    setCollectDueTargetSale(sale);
-    setIsCollectDueOpen(true);
+  // ── Collect due ───────────────────────────────────────────────────────────
+  const handleDueCollected = async (updatedSale: Sale) => {
+    // Invalidate so the list refreshes with the updated due status
+    await queryClient.invalidateQueries({ queryKey: ["sales"] });
+    if (selectedSale?.id === updatedSale.id) setSelectedSale(updatedSale);
   };
 
-  const handleDueCollected = (updatedSale: Sale) => {
-    setSales((prev) =>
-      prev.map((s) => (s.id === updatedSale.id ? updatedSale : s))
-    );
-    if (selectedSale?.id === updatedSale.id) {
-      setSelectedSale(updatedSale);
-    }
+  // ── Collect due via API ───────────────────────────────────────────────────
+  const handleCollectDueAPI = async (
+    saleId: string,
+    paymentAmount: number,
+    notes?: string,
+  ) => {
+    const updated = await salesService.collectDue(saleId, paymentAmount, notes);
+    await handleDueCollected(updated);
+    return updated;
   };
 
-  const handleOpenReturn = (sale: Sale) => {
-    setReturnTargetSale(sale);
-    setIsReturnModalOpen(true);
-  };
+  // ── Active filter count indicator ─────────────────────────────────────────
+  const activeFilters =
+    (debouncedSearch ? 1 : 0) +
+    (selectedPayment !== "All" ? 1 : 0) +
+    (dateRange.startDate || dateRange.endDate ? 1 : 0);
 
-  const handleReturnComplete = (ret: Return) => {
-    setCompletedReturn(ret);
-    setIsReturnReceiptOpen(true);
-  };
-
-  const getPaymentBadge = (method: PaymentMethod) => {
-    switch (method) {
-      case "Cash":
-        return (
-          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
-            <Banknote className="w-3 h-3" /> Cash
-          </span>
-        );
-      case "Owing":
-        return (
-          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-50 text-amber-700 border border-amber-200">
-            <CircleDollarSign className="w-3 h-3" /> Owing
-          </span>
-        );
-      default:
-        return (
-          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-slate-100 text-slate-700 border border-slate-200">
-            <Banknote className="w-3 h-3" /> {method}
-          </span>
-        );
-    }
+  const resetFilters = () => {
+    setSearchQuery("");
+    setDebouncedSearch("");
+    setSelectedPayment("All");
+    setDateRange({ startDate: "", endDate: "" });
+    setPage(1);
   };
 
   return (
     <div className="space-y-4">
-      {/* Metrics Banner */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <div className="bg-white p-3.5 rounded-xl border border-slate-200 shadow-xs">
-          <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
-            Filtered Invoices
-          </span>
-          <p className="text-xl font-bold font-mono text-slate-900 mt-0.5">
-            {filteredSales.length}
-          </p>
-          <span className="text-[11px] text-slate-400">
-            Total completed sales
-          </span>
-        </div>
-
-        <div className="bg-white p-3.5 rounded-xl border border-slate-200 shadow-xs">
-          <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
-            Filtered Revenue
-          </span>
-          <p className="text-xl font-bold font-mono text-emerald-700 mt-0.5">
-            {formatCurrency(totalFilteredRevenue)}
-          </p>
-          <span className="text-[11px] text-slate-400">Net billed total</span>
-        </div>
-
-        <div className={`p-3.5 rounded-xl border shadow-xs transition-all ${
-          totalFilteredOwing > 0 ? "bg-amber-50/50 border-amber-300" : "bg-white border-slate-200"
-        }`}>
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold text-amber-800 uppercase tracking-wider">
-              Total Owing (বাকি)
-            </span>
-            {totalFilteredOwing > 0 && (
-              <span className="text-[10px] font-bold px-1.5 py-0.2 rounded-full bg-amber-100 text-amber-800">
-                Uncollected
-              </span>
-            )}
-          </div>
-          <p className="text-xl font-bold font-mono text-amber-700 mt-0.5">
-            {formatCurrency(totalFilteredOwing)}
-          </p>
-          <span className="text-[11px] text-amber-600 font-medium">
-            Pending customer debt
-          </span>
-        </div>
-
-        <div className="bg-white p-3.5 rounded-xl border border-slate-200 shadow-xs">
-          <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
-            Average Basket Value
-          </span>
-          <p className="text-xl font-bold font-mono text-slate-900 mt-0.5">
-            {formatCurrency(
-              filteredSales.length > 0
-                ? totalFilteredRevenue / filteredSales.length
-                : 0,
-            )}
-          </p>
-          <span className="text-[11px] text-slate-400">Per transaction</span>
-        </div>
-      </div>
-
-      {/* Filter and Search Bar Card */}
+      {/* ── Filter and Search Bar ── */}
       <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-xs space-y-3">
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
-          {/* Search Box */}
+          {/* Search */}
           <div className="relative flex-1 max-w-md">
             <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
             <input
               type="text"
               value={searchQuery}
-              onChange={(e) => {
-                setSearchQuery(e.target.value);
-                setCurrentPage(1);
-              }}
-              placeholder="Search invoice, customer name, phone, cashier, or medicine..."
+              onChange={(e) => handleSearchChange(e.target.value)}
+              placeholder="Search invoice, customer, phone, cashier…"
               className="w-full pl-9 pr-8 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:bg-white"
             />
             {searchQuery && (
               <button
-                onClick={() => {
-                  setSearchQuery("");
-                  setCurrentPage(1);
-                }}
+                onClick={() => handleSearchChange("")}
                 className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
               >
                 <X className="w-3.5 h-3.5" />
@@ -263,46 +182,15 @@ export default function SalesHistoryPage() {
             )}
           </div>
 
-          {/* Quick Date Shortcuts */}
-          <div className="flex items-center gap-1.5 overflow-x-auto text-xs">
-            <button
-              onClick={() => {
-                const today = new Date().toISOString().split("T")[0];
-                setStartDate(today);
-                setEndDate(today);
-                setCurrentPage(1);
-              }}
-              className="px-2.5 py-1.5 rounded-md bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium"
-            >
-              Today
-            </button>
-            <button
-              onClick={() => {
-                const now = new Date();
-                const past = new Date();
-                past.setDate(now.getDate() - 7);
-                setStartDate(past.toISOString().split("T")[0]);
-                setEndDate(now.toISOString().split("T")[0]);
-                setCurrentPage(1);
-              }}
-              className="px-2.5 py-1.5 rounded-md bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium"
-            >
-              Last 7 Days
-            </button>
-            <button
-              onClick={() => {
-                setStartDate("");
-                setEndDate("");
-                setCurrentPage(1);
-              }}
-              className="px-2.5 py-1.5 rounded-md bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium"
-            >
-              All Time
-            </button>
-          </div>
+          {/* DateRangePicker */}
+          <DateRangePicker
+            value={dateRange}
+            onChange={handleDateRangeChange}
+            placeholder="All time"
+          />
         </div>
 
-        {/* Detailed Date Picker & Payment Filters */}
+        {/* Payment Method filter + loading + reset */}
         <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-slate-100 text-xs">
           <div className="flex items-center gap-1 text-slate-500 mr-1">
             <Filter className="w-3.5 h-3.5" />
@@ -311,105 +199,123 @@ export default function SalesHistoryPage() {
             </span>
           </div>
 
-          {/* Payment Method Selector */}
           <select
             value={selectedPayment}
             onChange={(e) => {
               setSelectedPayment(e.target.value as PaymentMethod | "All");
-              setCurrentPage(1);
+              setPage(1);
             }}
             className="bg-slate-50 border border-slate-200 rounded-md px-2 py-1 text-slate-700 focus:outline-none focus:ring-1 focus:ring-emerald-500"
           >
-            {paymentMethods.map((pm) => (
+            {PAYMENT_METHODS.map((pm) => (
               <option key={pm} value={pm}>
                 Payment: {pm}
               </option>
             ))}
           </select>
 
-          {/* Date Range Inputs */}
-          <div className="flex items-center gap-1.5 bg-slate-50 px-2 py-0.5 rounded-md border border-slate-200 text-slate-600">
-            <Calendar className="w-3.5 h-3.5 text-slate-400" />
-            <span className="text-[11px] text-slate-400">From:</span>
-            <input
-              type="date"
-              value={startDate}
-              onChange={(e) => {
-                setStartDate(e.target.value);
-                setCurrentPage(1);
-              }}
-              className="bg-transparent text-xs text-slate-700 focus:outline-none"
-            />
-            <span className="text-[11px] text-slate-400">To:</span>
-            <input
-              type="date"
-              value={endDate}
-              onChange={(e) => {
-                setEndDate(e.target.value);
-                setCurrentPage(1);
-              }}
-              className="bg-transparent text-xs text-slate-700 focus:outline-none"
-            />
-          </div>
+          {/* Loading indicator */}
+          {isFetching && (
+            <span className="flex items-center gap-1 text-[11px] text-emerald-600 font-medium">
+              <Loader2 className="w-3 h-3 animate-spin" />
+              Updating…
+            </span>
+          )}
 
-          {(searchQuery ||
-            selectedPayment !== "All" ||
-            startDate ||
-            endDate) && (
+          {activeFilters > 0 && (
             <button
-              onClick={() => {
-                setSearchQuery("");
-                setSelectedPayment("All");
-                setStartDate("");
-                setEndDate("");
-                setCurrentPage(1);
-              }}
-              className="text-[11px] text-rose-600 hover:underline ml-auto font-medium"
+              onClick={resetFilters}
+              className="text-[11px] text-rose-600 hover:underline ml-auto font-medium flex items-center gap-1"
             >
-              Reset Filters
+              <X className="w-3 h-3" />
+              Reset {activeFilters} filter{activeFilters > 1 ? "s" : ""}
             </button>
           )}
         </div>
       </div>
 
-      {/* Sales Invoices Table Card */}
+      {/* ── Summary strip (shown when a date range is active) ── */}
+      {(dateRange.startDate || dateRange.endDate) && meta && !isLoading && (
+        <div className="grid grid-cols-2 sm:grid-cols-2 gap-3">
+          <div className="bg-white p-3.5 rounded-xl border border-slate-200 shadow-xs">
+            <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
+              Invoices in range
+            </span>
+            <p className="text-xl font-bold font-mono text-slate-900 mt-0.5">
+              {totalCount}
+            </p>
+            <span className="text-[11px] text-slate-400">
+              Matching transactions
+            </span>
+          </div>
+          <div className="bg-white p-3.5 rounded-xl border border-slate-200 shadow-xs">
+            <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
+              Date window
+            </span>
+            <p className="text-sm font-bold text-emerald-700 mt-0.5 truncate">
+              {dateRange.startDate &&
+                new Date(dateRange.startDate).toLocaleDateString("en-GB", {
+                  day: "numeric",
+                  month: "short",
+                  year: "numeric",
+                })}
+              {dateRange.startDate && dateRange.endDate && " – "}
+              {dateRange.endDate &&
+                new Date(dateRange.endDate).toLocaleDateString("en-GB", {
+                  day: "numeric",
+                  month: "short",
+                  year: "numeric",
+                })}
+            </p>
+            <span className="text-[11px] text-slate-400">Selected period</span>
+          </div>
+        </div>
+      )}
+
+      {/* ── Sales Table ── */}
       <div className="bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden flex flex-col">
-        {/* Desktop Table View */}
+        {/* Desktop table */}
         <div className="hidden md:block overflow-x-auto">
           <table className="w-full text-left text-xs border-collapse">
             <thead>
               <tr className="bg-slate-50/80 border-b border-slate-200 text-slate-500 uppercase tracking-wider font-semibold text-[10px]">
                 <th className="py-3 px-4">Invoice #</th>
-                <th className="py-3 px-4">Date & Time</th>
+                <th className="py-3 px-4">Date &amp; Time</th>
                 <th className="py-3 px-4">Cashier</th>
-                <th className="py-3 px-4">Items Summary</th>
-                <th className="py-3 px-4">Payment Method</th>
+                <th className="py-3 px-4">Items</th>
+                <th className="py-3 px-4">Payment</th>
                 <th className="py-3 px-4 text-right">Net Amount</th>
                 <th className="py-3 px-4 text-center">Status</th>
-                <th className="py-3 px-4 text-right">Receipt</th>
+                <th className="py-3 px-4 text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {paginatedSales.length === 0 ? (
+              {isLoading ? (
+                Array.from({ length: 6 }).map((_, i) => (
+                  <tr key={i} className="animate-pulse">
+                    {Array.from({ length: 8 }).map((__, j) => (
+                      <td key={j} className="py-3 px-4">
+                        <div className="h-3.5 bg-slate-100 rounded w-3/4" />
+                      </td>
+                    ))}
+                  </tr>
+                ))
+              ) : sales.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="py-12 text-center text-slate-400">
+                  <td colSpan={8} className="py-16 text-center text-slate-400">
                     <FileText className="w-8 h-8 mx-auto mb-2 text-slate-300" />
                     <p className="font-semibold text-slate-700">
-                      No sales transactions found
+                      No sales found
                     </p>
-                    <p className="text-[11px] text-slate-400">
-                      Try adjusting your filters or date selection
+                    <p className="text-[11px] text-slate-400 mt-0.5">
+                      Try adjusting your filters or date range
                     </p>
                   </td>
                 </tr>
               ) : (
-                paginatedSales.map((sale) => {
+                sales.map((sale) => {
                   const due =
-                    typeof sale.dueAmount === "number"
-                      ? sale.dueAmount
-                      : sale.paymentMethod === "Owing"
-                      ? Math.max(0, sale.totalAmount - (sale.amountReceived || 0))
-                      : 0;
+                    typeof sale.dueAmount === "number" ? sale.dueAmount : 0;
                   const hasDue = due > 0;
 
                   return (
@@ -432,11 +338,6 @@ export default function SalesHistoryPage() {
                             )}
                           </div>
                         )}
-                        {sale.notes && (
-                          <span className="text-[10px] text-slate-400 truncate max-w-[150px] block">
-                            Ref: {sale.notes}
-                          </span>
-                        )}
                       </td>
                       <td className="py-3 px-4 text-slate-600 font-mono text-[11px]">
                         {formatDateTime(sale.createdAt)}
@@ -446,9 +347,9 @@ export default function SalesHistoryPage() {
                       </td>
                       <td className="py-3 px-4">
                         <div className="text-slate-900 font-medium">
-                          {sale.totalItems} pcs ({sale.items.length} medicines)
+                          {sale.totalItems} pcs ({sale.items.length})
                         </div>
-                        <div className="text-[10px] text-slate-400 truncate max-w-[200px]">
+                        <div className="text-[10px] text-slate-400 truncate max-w-[180px]">
                           {sale.items.map((i) => i.name).join(", ")}
                         </div>
                       </td>
@@ -459,20 +360,23 @@ export default function SalesHistoryPage() {
                         <span className="font-mono font-bold text-slate-900 text-sm">
                           {formatCurrency(sale.totalAmount)}
                         </span>
-                        {hasDue ? (
+                        {hasDue && (
                           <div className="text-[10px] text-amber-700 font-extrabold mt-0.5">
                             Due: ৳{due.toFixed(2)}
                             <span className="block text-[9px] text-slate-400 font-normal">
                               Paid: ৳{(sale.amountReceived || 0).toFixed(2)}
                             </span>
                           </div>
-                        ) : sale.dueStatus === "cleared" && sale.customerName ? (
-                          <div className="text-[9px] text-emerald-600 font-medium mt-0.5">
-                            ✓ Fully settled
-                          </div>
-                        ) : null}
+                        )}
+                        {!hasDue &&
+                          sale.dueStatus === "cleared" &&
+                          sale.customerName && (
+                            <div className="text-[9px] text-emerald-600 font-medium mt-0.5">
+                              ✓ Fully settled
+                            </div>
+                          )}
                         {sale.discountAmount > 0 && (
-                          <span className="text-[10px] text-emerald-600 block -mt-0.5">
+                          <span className="text-[10px] text-emerald-600 block">
                             Saved {formatCurrency(sale.discountAmount)}
                           </span>
                         )}
@@ -492,32 +396,41 @@ export default function SalesHistoryPage() {
                         <div className="flex items-center justify-end gap-1.5">
                           {hasDue && (
                             <button
-                              onClick={() => handleOpenCollectDue(sale)}
-                              className="flex items-center gap-1 px-2.5 py-1.5 bg-amber-500 hover:bg-amber-600 text-white rounded-md transition-colors text-[11px] font-bold shadow-xs shadow-amber-200 cursor-pointer"
-                              title="Collect Due Payment (বাকি আদায়)"
+                              onClick={() => {
+                                setCollectDueTargetSale(sale);
+                                setIsCollectDueOpen(true);
+                              }}
+                              className="flex items-center gap-1 px-2.5 py-1.5 bg-amber-500 hover:bg-amber-600 text-white rounded-md transition-colors text-[11px] font-bold shadow-xs cursor-pointer"
                             >
                               <HandCoins className="w-3.5 h-3.5" />
                               <span>Collect Due</span>
                             </button>
                           )}
                           <button
-                            onClick={() => handleOpenReturn(sale)}
+                            onClick={() => {
+                              setReturnTargetSale(sale);
+                              setIsReturnModalOpen(true);
+                            }}
                             className="flex items-center gap-1 px-2.5 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 rounded-md border border-rose-200 transition-colors text-[11px] font-medium cursor-pointer"
-                            title="Process Return"
                           >
                             <RotateCcw className="w-3.5 h-3.5 text-rose-500" />
                             <span>Return</span>
                           </button>
                           <button
-                            onClick={() => handleOpenReceipt(sale)}
+                            onClick={() => {
+                              setSelectedSale(sale);
+                              setIsReceiptOpen(true);
+                            }}
                             className="flex items-center gap-1 px-2.5 py-1.5 bg-slate-50 hover:bg-slate-100 text-slate-700 rounded-md border border-slate-200 transition-colors text-[11px] font-medium cursor-pointer"
-                            title="View & Print Invoice Memo"
                           >
                             <Eye className="w-3.5 h-3.5 text-slate-500" />
                             <span>View</span>
                           </button>
                           <button
-                            onClick={() => handleOpenReceipt(sale)}
+                            onClick={() => {
+                              setSelectedSale(sale);
+                              setIsReceiptOpen(true);
+                            }}
                             className="p-1.5 bg-slate-50 hover:bg-emerald-50 hover:text-emerald-700 text-slate-500 rounded-md border border-slate-200 transition-colors cursor-pointer"
                             title="Reprint Receipt"
                           >
@@ -533,26 +446,29 @@ export default function SalesHistoryPage() {
           </table>
         </div>
 
-        {/* Mobile Cards View */}
+        {/* Mobile cards */}
         <div className="md:hidden divide-y divide-slate-100">
-          {paginatedSales.length === 0 ? (
-            <div className="py-12 text-center text-slate-400 p-4">
+          {isLoading ? (
+            Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} className="p-3.5 space-y-2 animate-pulse">
+                <div className="h-4 bg-slate-100 rounded w-2/3" />
+                <div className="h-3 bg-slate-100 rounded w-1/2" />
+              </div>
+            ))
+          ) : sales.length === 0 ? (
+            <div className="py-12 text-center p-4">
               <FileText className="w-8 h-8 mx-auto mb-2 text-slate-300" />
               <p className="font-semibold text-slate-700 text-sm">
-                No sales transactions found
+                No sales found
               </p>
               <p className="text-xs text-slate-400 mt-1">
-                Try adjusting your filters or date selection
+                Try adjusting filters
               </p>
             </div>
           ) : (
-            paginatedSales.map((sale) => {
+            sales.map((sale) => {
               const due =
-                typeof sale.dueAmount === "number"
-                  ? sale.dueAmount
-                  : sale.paymentMethod === "Owing"
-                  ? Math.max(0, sale.totalAmount - (sale.amountReceived || 0))
-                  : 0;
+                typeof sale.dueAmount === "number" ? sale.dueAmount : 0;
               const hasDue = due > 0;
 
               return (
@@ -577,15 +493,17 @@ export default function SalesHistoryPage() {
                         {formatDateTime(sale.createdAt)}
                       </span>
                     </div>
-                    <div className="flex items-center gap-1">
-                      {getPaymentBadge(sale.paymentMethod)}
-                    </div>
+                    {getPaymentBadge(sale.paymentMethod)}
                   </div>
 
                   <div className="text-xs text-slate-600">
-                    <span className="font-semibold">{sale.totalItems} items: </span>
+                    <span className="font-semibold">
+                      {sale.totalItems} items:{" "}
+                    </span>
                     <span className="text-slate-500">
-                      {sale.items.map((i) => `${i.name} (x${i.quantity})`).join(", ")}
+                      {sale.items
+                        .map((i) => `${i.name} ×${i.quantity}`)
+                        .join(", ")}
                     </span>
                   </div>
 
@@ -594,22 +512,19 @@ export default function SalesHistoryPage() {
                       <span className="text-base font-mono font-bold text-slate-900">
                         {formatCurrency(sale.totalAmount)}
                       </span>
-                      {hasDue ? (
+                      {hasDue && (
                         <div className="text-xs text-amber-800 font-extrabold">
                           Due: ৳{due.toFixed(2)}
                         </div>
-                      ) : sale.dueStatus === "cleared" && sale.customerName ? (
-                        <div className="text-[10px] text-emerald-600 font-medium">
-                          ✓ All dues cleared
-                        </div>
-                      ) : null}
+                      )}
                     </div>
-
                     <div className="flex items-center gap-1.5">
                       {hasDue && (
                         <button
-                          type="button"
-                          onClick={() => handleOpenCollectDue(sale)}
+                          onClick={() => {
+                            setCollectDueTargetSale(sale);
+                            setIsCollectDueOpen(true);
+                          }}
                           className="flex items-center gap-1 px-2.5 py-1.5 bg-amber-500 hover:bg-amber-600 text-white rounded-lg text-xs font-bold shadow-xs cursor-pointer"
                         >
                           <HandCoins className="w-3.5 h-3.5" />
@@ -617,16 +532,20 @@ export default function SalesHistoryPage() {
                         </button>
                       )}
                       <button
-                        type="button"
-                        onClick={() => handleOpenReceipt(sale)}
+                        onClick={() => {
+                          setSelectedSale(sale);
+                          setIsReceiptOpen(true);
+                        }}
                         className="flex items-center gap-1 px-2.5 py-1.5 bg-slate-900 hover:bg-slate-800 text-white rounded-lg text-xs font-semibold shadow-xs cursor-pointer"
                       >
                         <Receipt className="w-3.5 h-3.5" />
                         <span>View</span>
                       </button>
                       <button
-                        type="button"
-                        onClick={() => handleOpenReturn(sale)}
+                        onClick={() => {
+                          setReturnTargetSale(sale);
+                          setIsReturnModalOpen(true);
+                        }}
                         className="flex items-center gap-1 px-2.5 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 rounded-lg text-xs font-semibold border border-rose-200 cursor-pointer"
                       >
                         <RotateCcw className="w-3.5 h-3.5" />
@@ -640,82 +559,76 @@ export default function SalesHistoryPage() {
           )}
         </div>
 
-        {/* Pagination Footer */}
-        <div className="px-4 py-3 border-t border-slate-200 bg-slate-50/50 flex items-center justify-between text-xs text-slate-500">
-          <div>
-            Showing{" "}
-            <span className="font-semibold text-slate-700">
-              {filteredSales.length === 0
-                ? 0
-                : (currentPage - 1) * ITEMS_PER_PAGE + 1}
-            </span>{" "}
-            to{" "}
-            <span className="font-semibold text-slate-700">
-              {Math.min(currentPage * ITEMS_PER_PAGE, filteredSales.length)}
-            </span>{" "}
-            of{" "}
-            <span className="font-semibold text-slate-700">
-              {filteredSales.length}
-            </span>{" "}
-            invoices
+        {/* Pagination footer */}
+        {!isLoading && meta && (
+          <div className="px-4 py-3 border-t border-slate-200 bg-slate-50/50 flex items-center justify-between text-xs text-slate-500">
+            <div>
+              Showing{" "}
+              <span className="font-semibold text-slate-700">
+                {totalCount === 0 ? 0 : (page - 1) * ITEMS_PER_PAGE + 1}
+              </span>{" "}
+              to{" "}
+              <span className="font-semibold text-slate-700">
+                {Math.min(page * ITEMS_PER_PAGE, totalCount)}
+              </span>{" "}
+              of{" "}
+              <span className="font-semibold text-slate-700">{totalCount}</span>{" "}
+              invoices
+            </div>
+            <div className="flex items-center gap-1.5">
+              <button
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                disabled={page <= 1}
+                className={`p-1.5 rounded-md border border-slate-200 ${
+                  page <= 1
+                    ? "text-slate-300 cursor-not-allowed bg-slate-50"
+                    : "text-slate-700 hover:bg-slate-100 bg-white"
+                }`}
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </button>
+              <span className="px-2 font-medium">
+                Page {page} of {totalPages}
+              </span>
+              <button
+                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                disabled={page >= totalPages}
+                className={`p-1.5 rounded-md border border-slate-200 ${
+                  page >= totalPages
+                    ? "text-slate-300 cursor-not-allowed bg-slate-50"
+                    : "text-slate-700 hover:bg-slate-100 bg-white"
+                }`}
+              >
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            </div>
           </div>
-
-          <div className="flex items-center gap-1.5">
-            <button
-              onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-              disabled={currentPage <= 1}
-              className={`p-1.5 rounded-md border border-slate-200 ${
-                currentPage <= 1
-                  ? "text-slate-300 cursor-not-allowed bg-slate-50"
-                  : "text-slate-700 hover:bg-slate-100 bg-white"
-              }`}
-            >
-              <ChevronLeft className="w-4 h-4" />
-            </button>
-            <span className="px-2 font-medium">
-              Page {currentPage} of {totalPages}
-            </span>
-            <button
-              onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-              disabled={currentPage >= totalPages}
-              className={`p-1.5 rounded-md border border-slate-200 ${
-                currentPage >= totalPages
-                  ? "text-slate-300 cursor-not-allowed bg-slate-50"
-                  : "text-slate-700 hover:bg-slate-100 bg-white"
-              }`}
-            >
-              <ChevronRight className="w-4 h-4" />
-            </button>
-          </div>
-        </div>
+        )}
       </div>
 
-      {/* Printable Receipt Modal */}
+      {/* ── Modals ── */}
       <ReceiptModal
         isOpen={isReceiptOpen}
         onClose={() => setIsReceiptOpen(false)}
         sale={selectedSale}
       />
-
-      {/* Return Processing Modal */}
       <ReturnModal
         isOpen={isReturnModalOpen}
         onClose={() => {
           setIsReturnModalOpen(false);
           setReturnTargetSale(null);
         }}
-        onReturnComplete={handleReturnComplete}
+        onReturnComplete={(ret) => {
+          setCompletedReturn(ret);
+          setIsReturnReceiptOpen(true);
+        }}
         preloadedSale={returnTargetSale}
       />
-
-      {/* Return Receipt Modal */}
       <ReturnReceiptModal
         isOpen={isReturnReceiptOpen}
         onClose={() => setIsReturnReceiptOpen(false)}
         returnData={completedReturn}
       />
-
-      {/* Collect Due Payment Modal */}
       <CollectDueModal
         isOpen={isCollectDueOpen}
         onClose={() => {

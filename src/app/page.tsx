@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { Store, Eye, EyeOff, AlertCircle } from "lucide-react";
@@ -38,17 +38,11 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [serverError, setServerError] = useState("");
 
-  useEffect(() => {
-    if (!isLoading && isAuthenticated) {
-      router.replace("/dashboard");
-    }
-  }, [isAuthenticated, isLoading, router]);
-
   const onSubmit = async (data: LoginFormData) => {
     setServerError("");
     try {
-      await login({ email: data.email, password: data.password });
-      router.replace("/dashboard");
+      const user = await login({ email: data.email, password: data.password });
+      router.replace(user.role === "Admin" ? "/dashboard" : "/dashboard/pos");
     } catch (err: unknown) {
       setServerError(
         isApiError(err) ? err.message : "Unable to log in. Please try again.",

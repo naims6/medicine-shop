@@ -136,21 +136,12 @@ export default function UsersPage() {
   const [userToPassword, setUserToPassword]   = useState<User | null>(null);
   const [actionError, setActionError]         = useState("");
 
-  const { data, isLoading, isFetching } = useUsers({ page, limit: PAGE_SIZE });
+  const { data, isLoading, isFetching } = useUsers({ page, limit: PAGE_SIZE, search: search.trim() || undefined, role: roleFilter, status: statusFilter });
   const updateMutation  = useUpdateUser();
   const deleteMutation  = useDeleteUser();
 
   const users = useMemo(() => data?.data ?? [], [data]);
   const meta  = data?.meta;
-
-  const filtered = useMemo(() => {
-    const q = search.toLowerCase().trim();
-    return users.filter((u) =>
-      (!q || u.name.toLowerCase().includes(q) || u.email.toLowerCase().includes(q) || (u.phone ?? "").toLowerCase().includes(q)) &&
-      (roleFilter   === "ALL" || u.role   === roleFilter) &&
-      (statusFilter === "ALL" || u.status === statusFilter)
-    );
-  }, [users, search, roleFilter, statusFilter]);
 
   const metrics = useMemo(() => ({
     total:    meta?.total ?? 0,
@@ -174,6 +165,7 @@ export default function UsersPage() {
 
   const handleDelete = async () => {
     if (!userToDelete) return;
+    setActionError("");
     try {
       await deleteMutation.mutateAsync(userToDelete.id);
       setUserToDelete(null);
@@ -251,7 +243,7 @@ export default function UsersPage() {
       {/* Table */}
       <DataTable
         columns={COLUMNS}
-        data={filtered}
+        data={users}
         loading={isLoading}
         fetching={isFetching}
         emptyMessage={search || roleFilter !== "ALL" || statusFilter !== "ALL" ? "No users match the current filters." : "No users found."}

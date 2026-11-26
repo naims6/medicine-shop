@@ -4,10 +4,15 @@ import { useQuery } from "@tanstack/react-query";
 import { dashboardService } from "@/services/dashboard.service";
 import type { SalesTrendQuery } from "@/types";
 
-export function useSalesTrend(query: SalesTrendQuery = {}) {
+interface UseSalesTrendOptions extends SalesTrendQuery {
+  enabled?: boolean;
+}
+
+export function useSalesTrend({ enabled = true, ...query }: UseSalesTrendOptions = {}) {
   return useQuery({
     queryKey: ["dashboard", "sales-trend", query],
     queryFn: () => dashboardService.getSalesTrend(query),
-    staleTime: 60 * 1000, // 1 minute
+    staleTime: 60 * 1000,
+    enabled,
   });
 }
