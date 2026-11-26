@@ -15,14 +15,20 @@ export interface UsersPage {
 export interface UsersQuery {
   page?: number;
   limit?: number;
+  search?: string;
+  role?: string;
+  status?: string;
 }
 
 export const usersService = {
-  /** GET /users?page=&limit= */
+  /** GET /users?page=&limit=&search=&role=&status= */
   getAll(query: UsersQuery = {}): Promise<UsersPage> {
     const params = new URLSearchParams();
     if (query.page !== undefined) params.set("page", String(query.page));
     if (query.limit !== undefined) params.set("limit", String(query.limit));
+    if (query.search) params.set("search", query.search);
+    if (query.role && query.role !== "ALL") params.set("role", query.role);
+    if (query.status && query.status !== "ALL") params.set("status", query.status);
     const qs = params.toString();
     return api.getPaginated<UsersPage>(`/users${qs ? `?${qs}` : ""}`);
   },
